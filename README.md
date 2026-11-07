@@ -70,12 +70,12 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
 | --- | --- | --- |
 | Código fuente y Makefile | Repositorio, a definir en la Parte III | Pendiente |
 | README explicativo | Este archivo | En construcción: Parte I y Parte II documentadas; Parte III pendiente |
-| Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](docx/Estrategia%20Parcial%203.pdf) | En construcción: el README se completa con la Parte III |
+| Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](src/docx/Estrategia%20Parcial%203.pdf) | En construcción: el README se completa con la Parte III |
 | Evidencia individual | Buzón de interactiva EAFIT; la sube cada integrante | Pendiente |
 
 ### Estrategia en PDF
 
-Documento de la estrategia del equipo para el Parcial 3: [Estrategia Parcial 3 (PDF)](docx/Estrategia%20Parcial%203.pdf).
+Documento de la estrategia del equipo para el Parcial 3: [Estrategia Parcial 3 (PDF)](src/docx/Estrategia%20Parcial%203.pdf).
 
 ## Parte I: Análisis conceptual y preguntas diagnósticas (30%)
 
@@ -198,21 +198,21 @@ Los resultados esperados son hipótesis por validar, no hechos:
 
 #### Capturas de los prompts enviados
 
-Las capturas de los prompts se guardan en la carpeta `capturas/3.1/` de la raíz del repositorio.
+Las capturas de los prompts se guardan en la carpeta `src/capturas/3.1/`.
 
 | Prompt | Archivo | Estado |
 | --- | --- | --- |
-| P1 | `capturas/3.1/P1.png` | Pendiente |
-| P2 | `capturas/3.1/P2.png` | Pendiente |
-| P3 | `capturas/3.1/P3.png` | Pendiente |
-| P4 | `capturas/3.1/P4.png` | Pendiente |
-| P5 | `capturas/3.1/P5.png` | Pendiente |
-| P6 | `capturas/3.1/P6.png` | Pendiente |
-| P7 | `capturas/3.1/P7.png` | Pendiente |
-| P8 | `capturas/3.1/P8.png` | Pendiente |
-| P9 | `capturas/3.1/P9.png` | Pendiente |
-| P10 | `capturas/3.1/P10.png` | Pendiente |
-| P11 | `capturas/3.1/P11.png` | Pendiente |
+| P1 | `src/capturas/3.1/P1.png` | Pendiente |
+| P2 | `src/capturas/3.1/P2.png` | Pendiente |
+| P3 | `src/capturas/3.1/P3.png` | Pendiente |
+| P4 | `src/capturas/3.1/P4.png` | Pendiente |
+| P5 | `src/capturas/3.1/P5.png` | Pendiente |
+| P6 | `src/capturas/3.1/P6.png` | Pendiente |
+| P7 | `src/capturas/3.1/P7.png` | Pendiente |
+| P8 | `src/capturas/3.1/P8.png` | Pendiente |
+| P9 | `src/capturas/3.1/P9.png` | Pendiente |
+| P10 | `src/capturas/3.1/P10.png` | Pendiente |
+| P11 | `src/capturas/3.1/P11.png` | Pendiente |
 
 ### Metodología de ingeniería de prompts y verificación crítica
 
@@ -230,7 +230,7 @@ Estructura de cada prompt: **C** contexto, **R** rol, **Rs** restricción, **RE*
 | P4 | Prompt | Claude AI a agente en paralelo | Rol 3: pruebas y PoC | Definir el rol de la IA en casos de prueba y PoC controladas. | **C:** contexto compartido. <br>**R:** agente de casos de prueba y PoC. <br>**Rs:** pruebas solo sobre archivos temporales, sin escalada de privilegios y sin reproducir CVE-2016-5195. <br>**RE:** fragmento del Rol 3 con tabla de 4 casos como hipótesis, máximo 280 palabras. | Ejecutado; integrado |
 | P5 | Prompt | Claude AI a agente en paralelo | Diagrama conceptual | Dibujar la arquitectura propuesta mostrando el mecanismo. | **C:** contexto compartido y opción C. <br>**R:** agente de diseño del diagrama. <br>**Rs:** un solo diagrama Mermaid validado con `mmdc`; debe mostrar frontera de syscall, hook, mapa de política, decisión, ring buffer, page fault, PTE y límite de cobertura. <br>**RE:** bloque Mermaid, leyenda de máximo 8 filas y párrafo de límite de cobertura. | Ejecutado; integrado |
 | P6 | Prompt | Claude AI a agente en paralelo | Matriz de compensaciones | Comparar rendimiento y seguridad entre las alternativas A a E. | **C:** contexto compartido y alternativas A a E. <br>**R:** agente evaluador con 0% de complacencia. <br>**Rs:** criterios mínimos fijados; escala cualitativa; sin mediciones inventadas. <br>**RE:** matriz, resumen por eje y justificación de la selección. | Ejecutado; integrado |
-| P7 | Prompt | Miguel a Claude AI | Ronda 2: aclaraciones y objetivos | Fijar las capturas de 3.1, dejar la validación como estructura, crear el prompt del reporte, actualizar el README con la rúbrica y explicar la importación de la wiki. | **C:** README con la Parte II ya integrada, rúbrica del parcial, skills y prompts de la ronda 1. <br>**R:** Claude AI como orquestador de tres agentes en paralelo, uno por objetivo. <br>**Rs:** capturas en `capturas/3.1/`; validación solo con estructura; README sin el enlace de sustentación y con autores; usar skills, prompts y rúbrica compartidos. <br>**RE:** `promptGenerarReporte.md`, README actualizado y explicación de la wiki. | Enviado |
+| P7 | Prompt | Miguel a Claude AI | Ronda 2: aclaraciones y objetivos | Fijar las capturas de 3.1, dejar la validación como estructura, crear el prompt del reporte, actualizar el README con la rúbrica y explicar la importación de la wiki. | **C:** README con la Parte II ya integrada, rúbrica del parcial, skills y prompts de la ronda 1. <br>**R:** Claude AI como orquestador de tres agentes en paralelo, uno por objetivo. <br>**Rs:** capturas en `src/capturas/3.1/`; validación solo con estructura; README sin el enlace de sustentación y con autores; usar skills, prompts y rúbrica compartidos. <br>**RE:** `promptGenerarReporte.md`, README actualizado y explicación de la wiki. | Enviado |
 | P8 | Prompt | Claude AI a agente en paralelo | Redactor de `promptGenerarReporte.md` | Escribir el prompt que Claude Code usará para generar `reporteBase.md`. | **C:** contexto compartido, estructura conocida del repo, pendientes POR CONFIRMAR y lista DESCUBRIR, reglas de la skill `token-efficient-code`. <br>**R:** redactor del prompt; Claude Code solo construye. <br>**Rs:** un solo `.md`, abre con `/anthropic-skills:token-efficient-code`, sin reescribir las reglas de la skill, pasos numerados con DEFAULT y DESCUBRIR, máximo 170 líneas. <br>**RE:** archivo del prompt con el formato obligatorio del reporte y el bloque "Al terminar". | Ejecutado; integrado |
 | P9 | Prompt | Claude AI a agente en paralelo | Editor del README según la rúbrica | Actualizar el README al Parcial 3 sin perder la base heredada. | **C:** copia de trabajo del README y entregables de la rúbrica. <br>**R:** editor del README. <br>**Rs:** trabajar solo sobre una copia; quitar el enlace de sustentación; conservar Autores; no tocar la Parte II; renombrar "Parte N de la entrega" a "Base heredada N"; verificar anclas y tablas. <br>**RE:** README actualizado con verificaciones en una línea cada una. | Ejecutado; integrado |
 | P10 | Prompt | Claude AI a agente en paralelo | Guía para importar la wiki | Explicar cómo traer la wiki del repo a la carpeta raíz. | **C:** repo local, URL de la wiki, Windows con PowerShell y WSL2. <br>**R:** tutor que verifica con la documentación oficial de GitHub. <br>**Rs:** no ejecutar nada en el equipo ni en GitHub; marcar POR CONFIRMAR lo no verificado. <br>**RE:** tabla de tres opciones, recomendación con comandos y advertencia del guion Unicode. | Ejecutado; explicación en el chat |
@@ -874,8 +874,8 @@ La ida y vuelta (`C` + `X` concurrente y `c` + `x` secuencial) produjo el mismo 
 | `editor/` | Editor por líneas (`main.c`, `editor.c`, `lista.c`) y compresor (`huffman.c`, `hilos.c`, `huf_editor.c`), con su `Makefile` |
 | `editor/tests/` | `run_tests.sh`, `run_tests_huf.sh` y el CLI de pruebas `huf_cli.c` |
 | `editor/docs/` | `REPORTE_TECNICO.md`, `CONCURRENCIA.md`, `FORMATO_HUF.md` |
-| `capturas/` | Evidencia gráfica de la Parte II (capturas de prompts en `capturas/3.1/`) |
-| `Parte1_Analisis_Conceptual.md` | Respuestas de Sebastián a las diez preguntas de la Parte I (texto fuente, ya incorporado a este README) |
+| `src/capturas/` | Evidencia gráfica de la Parte II (capturas de prompts en `src/capturas/3.1/`) |
+| `src/docx/` | `Estrategia Parcial 3.pdf`, el PDF de la estrategia del equipo |
 
 ## Autores
 
