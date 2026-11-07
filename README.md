@@ -38,8 +38,9 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
       3. [Ejecución de mmapguard](#ejecución-de-mmapguard)
    2. [Argumentación y análisis de resultados](#argumentación-y-análisis-de-resultados)
       1. [Por qué decidir en el kernel y no en espacio de usuario](#por-qué-decidir-en-el-kernel-y-no-en-espacio-de-usuario)
-      2. [Costos medidos (línea base, sin defensa)](#costos-medidos-línea-base-sin-defensa)
-      3. [Limitaciones y trabajo futuro](#limitaciones-y-trabajo-futuro)
+      2. [Resultados con defensa](#resultados-con-defensa)
+      3. [Costos medidos (línea base y con defensa)](#costos-medidos-línea-base-y-con-defensa)
+      4. [Limitaciones y trabajo futuro](#limitaciones-y-trabajo-futuro)
 5. [Categorías preexistentes del shell](#categorías-preexistentes-del-shell)
    1. [Datos y archivos (`datos`)](#datos-y-archivos-datos)
    2. [Memoria (`memoria`)](#memoria-memoria)
@@ -74,8 +75,8 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
 
 | Entregable | Dónde | Estado |
 | --- | --- | --- |
-| Código fuente y Makefile | [`mmapguard/`](mmapguard/) | Escrito y compilado sin advertencias; la carga de la defensa y las pruebas que la necesitan quedan pendientes (requieren root) |
-| README explicativo | Este archivo | Parte I, Parte II y Parte III documentadas; falta llenar la medición con defensa |
+| Código fuente y Makefile | [`mmapguard/`](mmapguard/) | Escrito y compilado sin advertencias; cargamos la defensa con `sudo` y las pruebas con root dieron 64 PASS, 0 FAIL |
+| README explicativo | Este archivo | Parte I, Parte II y Parte III documentadas, con la medición con defensa en 2 sesiones (la guía pedía 3) |
 | Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](src/docx/Estrategia%20Parcial%203.pdf) | En construcción: el README se completa con la Parte III |
 | Evidencia individual | Buzón de interactiva EAFIT; la sube cada integrante | Pendiente |
 
@@ -350,9 +351,11 @@ Registro de ejecuciones:
 
 | ID | Fecha | Duda y captura | Observaciones | Peticiones | Alucinación detectada | Corrección aplicada |
 | --- | --- | --- | --- | --- | --- | --- |
-| E-00 | Sin ejecuciones registradas | N/A | N/A | N/A | N/A | N/A |
+| E-01 | 2026-11-07 | Por qué `perf stat` dejó de funcionar después de instalar `linux-tools-generic`. Captura: `src/capturas/3.2/E01_perf_wrapper_ubuntu.jpg` | Antes del `apt install`, `make bench` mostraba 58, 15299 y 59 page-faults con `perf stat`. Después, el `perf` del PATH imprime "WARNING: perf not found for kernel 6.18.54.1-microsoft" y sugiere paquetes `linux-tools-6.18.54.1-microsoft-standard-WSL2`; `make bench` pasa a "perf stat: no funciona sin root; se omite". | Recuperar un `perf` que funcione y que el bench no dependa del PATH. | La IA nos indicó instalar `linux-tools-generic` para tener `perf` y `strace` listos, dando por hecho que traería un `perf` usable. En WSL2 el kernel no es el genérico de Ubuntu: el `perf` del PATH quedó como el wrapper de Ubuntu, que busca herramientas para `6.18.54.1-microsoft` y no las encuentra. | `bench.sh` y `bench_con_defensa.sh` detectan el perf de verdad: si `perf --version` falla, buscan `/usr/lib/linux-tools/*/perf` o `*/bin/perf` y usan el primero que funcione; si ninguno sirve, avisan en una línea y siguen sin perf, sin inventar contadores. |
+| E-02 | 2026-11-07 | Por qué `sudo bpftool prog show` falla justo después de `load`. Captura: `src/capturas/3.2/E02_bpftool_wrapper_ubuntu.jpg` | `sudo ./build/mmapguard load` respondió "mmapguard cargado: pines en /sys/fs/bpf/mmapguard"; enseguida `bpftool prog show` imprimió "WARNING: bpftool not found for kernel 6.18.54.1-microsoft", el mismo wrapper de E-01. | Listar los programas BPF cargados con un bpftool que funcione. | La IA nos pidió `sudo ./build/mmapguard load && sudo bpftool prog show`, asumiendo que el `bpftool` del PATH funcionaba. En WSL2 es el wrapper de Ubuntu y no ejecuta nada. | El Makefile detecta bpftool también en `/usr/lib/linux-tools/*/bpftool` (con `TC_PREFIX` vacío; si `TC_PREFIX` existe, sigue siendo prioritario). Para consultar a mano usamos la ruta: `$(ls /usr/lib/linux-tools/*/bpftool \| head -1) prog show`. |
+| E-03 | 2026-11-07 | Por qué el segundo `load` respondió "ya esta cargado". Captura: `src/capturas/3.2/E03_ya_esta_cargado.jpg` | Al repetir `sudo ./build/mmapguard load && sudo bpftool prog show`, la CLI respondió "ya esta cargado (existe /sys/fs/bpf/mmapguard/mg_policy); ejecutar 'sudo mmapguard unload' antes". El primer `load` había quedado activo porque falló el bpftool que venía encadenado después. | Repetir la carga y la inspección; saber en qué estado quedó la defensa. | La guía ponía un `load` manual antes de la demo, las pruebas y el bench, y daba por hecho que la cadena terminaba limpia. No contemplaba que un fallo posterior dejara la defensa cargada. La defensa pudo quedar cargada en el WSL de Miguel (por confirmar con `ls /sys/fs/bpf/mmapguard`). | Nada exige un `load` manual previo: `demo.sh defended`, `run_tests.sh` y `bench_con_defensa.sh` cargan y descargan solos, con `trap` que descarga aunque falle. Esos scripts y `demo.sh defended` avisan "si quedó cargada: sudo ./build/mmapguard unload". Comando manual para limpiar: `sudo ./build/mmapguard unload`. |
 
-Lista de revisión por categoría (rúbrica 3.2). Estado: sin hallazgos de la IA registrados todavía.
+Lista de revisión por categoría (rúbrica 3.2). Estado: E-01, E-02 y E-03 son suposiciones de entorno (herramientas y orden de ejecución en WSL2); todavía no registramos hallazgos de las cuatro categorías de código del kernel.
 
 | Categoría | Cómo se detecta |
 | --- | --- |
@@ -369,27 +372,137 @@ Hallazgos de verificación de esta fase:
 
 #### Validación y compilación
 
-Solo estructura. Claude Code renueva todos los pasos, comandos y resultados con la salida real al terminar la implementación.
+Esta sección ya no es solo estructura: son los pasos que seguimos el sábado 2026-11-07 en nuestro WSL2 (Ubuntu 24.04), con los comandos tal como los escribimos y lo que vimos en pantalla. Los números de las pruebas y de la medición salen de las capturas, no los estimamos ni los redondeamos.
 
 ##### Versiones compatibles
 
 | Componente | Versión | Cómo se verifica |
 | --- | --- | --- |
-| Por completar | Por completar | Por completar |
+| Kernel | 6.18.54.1-microsoft-standard-WSL2 | `uname -r` |
+| Lista de LSM activos | `capability,landlock,yama,safesetid,selinux,bpf,ima` (`bpf` activo sin tocar `.wslconfig`) | `cat /sys/kernel/security/lsm` (securityfs ya estaba montado) |
+| gcc | 13.3.0 | `gcc --version` |
+| make | 4.3 | `make --version` |
+| clang | 18.1.3 | `clang --version` |
+| bpftool | v7.4.0, con libbpf v1.4 | `$(ls /usr/lib/linux-tools/*/bpftool \| head -1) version` |
+| strace | POR CONFIRMAR (se instaló con `apt`) | `strace -V` |
+| perf | POR CONFIRMAR (viene en `linux-tools-generic`) | `perf --version` |
 
 ##### Paso a paso
 
-1. Por completar.
+Todo se hace desde WSL2, en la carpeta `mmapguard/`. Nada de lo que sigue exige cargar la defensa a mano antes: la demo, las pruebas y la medición con defensa la cargan y la descargan solas.
+
+1. Fecha y kernel. Confirmamos la fecha de la sesión y la versión del kernel de WSL2.
+
+   ```bash
+   date; uname -r
+   ```
+
+   Resultado: `Sat Nov 7 02:12:10 -05 2026` y `6.18.54.1-microsoft-standard-WSL2`.
+
+   ![Fecha de la sesión y kernel de WSL2 con uname -r](src/capturas/3.2/02_fecha_y_kernel.jpg)
+
+2. LSM activos. Comprobamos que `bpf` esté en la lista de LSM, porque sin eso el programa BPF no se engancha.
+
+   ```bash
+   sudo mount -t securityfs securityfs /sys/kernel/security; cat /sys/kernel/security/lsm
+   ```
+
+   Resultado: el `mount` avisó que securityfs ya estaba montado y la lista fue `capability,landlock,yama,safesetid,selinux,bpf,ima`. `bpf` está activo sin tocar `.wslconfig`.
+
+   ![Lista de LSM activos con bpf incluido](src/capturas/3.2/01_lsm_activos.jpg)
+
+3. Toolchain. Verificamos las versiones de clang y de bpftool (con la ruta real, no con el wrapper de Ubuntu).
+
+   ```bash
+   clang --version
+   $(ls /usr/lib/linux-tools/*/bpftool | head -1) version
+   ```
+
+   Resultado: clang 18.1.3 (Ubuntu), target `x86_64-pc-linux-gnu`; bpftool v7.4.0 usando libbpf v1.4.
+
+   ![Versiones de clang y bpftool](src/capturas/3.2/03_toolchain_clang_bpftool.jpg)
+
+4. Compilar. `make` genera en `build/` el objeto BPF, el skeleton y el binario `mmapguard`. El código de usuario se compila con `-Wall -Wextra -Werror -std=gnu11`, así que cualquier advertencia habría detenido la compilación.
+
+   ```bash
+   make
+   ```
+
+5. Pruebas sin root. Corremos la batería completa sin `sudo`; los casos que necesitan cargar la defensa se anotan como REQUIERE ROOT en vez de fallar.
+
+   ```bash
+   make test
+   ```
+
+   Resultado: `RESUMEN: 49 PASS, 0 FAIL, 7 REQUIERE ROOT`.
+
+   ![Salida de make test sin root, tramo final](src/capturas/3.2/04_make_test_sin_root_49_pass.jpg)
+
+   ![Resumen de make test: 49 PASS, 0 FAIL, 7 REQUIERE ROOT](src/capturas/3.2/05_make_test_8_4.jpg)
+
+   Con `sudo` las mismas pruebas dan `RESUMEN: 64 PASS, 0 FAIL, 0 REQUIERE ROOT`; esa captura y la de la demo con defensa están en la Parte III. El comando con root es:
+
+   ```bash
+   sudo MMAPGUARD=$PWD/build/mmapguard bash tests/run_tests.sh
+   ```
+
+6. Demostración. Sin defensa (no pide root) y con defensa (pide root; carga, agrega la regla `deny-write-shared,deny-exec`, corre los cuatro modos, muestra los eventos y descarga). Si algo falla en medio, un `trap` descarga la defensa.
+
+   ```bash
+   bash demo/demo.sh
+   sudo bash demo/demo.sh defended
+   ```
+
+   Resultado sin defensa: `shared-write`, `private-write`, `exec` y `mprotect-write` salieron PERMITIDO (código 0) y la escritura llegó al archivo. Resultado con defensa: `shared-write`, `exec` y `mprotect-write` salieron DENEGADO con `errno=1` (código 10) y `private-write` siguió PERMITIDO (código 0).
+
+7. Medición de la línea base. `make bench` compila `build/bench_mmap` y corre 10 corridas de 1000 iteraciones por escenario, sin defensa y sin root.
+
+   ```bash
+   make bench
+   ```
+
+   Resultado (nproc=12, ns por iteración, mediana con mínimo y máximo): `mmap_munmap` 1570.0 (1157.8 a 4244.1), `mmap_touch` 16909.2 (15996.1 a 18373.2) y `mmap_mprotect` 1828.0 (1506.3 a 2370.8); fallos menores medianos 2, 15002 y 2.
+
+   ![Primera ejecución de make bench con la tabla de ns por iteración](src/capturas/3.2/06_make_bench_primera.jpg)
+
+8. Segunda lectura con `perf stat`. Antes de instalar nada, el bench también mostró los contadores de `perf stat` sin root (la corrida adicional cuenta el proceso completo, incluido el arranque): 58, 15299 y 59 page-faults. En esa misma salida `strace` salió "no encontrado" y ftrace "sin permiso (Permission denied)" sobre `/sys/kernel/tracing`.
+
+   ![perf stat con 58, 15299 y 59 page-faults, antes de instalar con apt](src/capturas/3.2/07_perf_stat_antes_de_apt.jpg)
+
+9. Herramientas de trazado. Para strace y perf instalamos los paquetes con `apt`. Este paso fue el que desencadenó los incidentes E-01 y E-02 del registro de más abajo.
+
+   ```bash
+   sudo apt update && sudo apt install -y strace linux-tools-generic
+   ```
+
+   ![Instalación de strace y linux-tools-generic con apt](src/capturas/3.2/08_apt_install_strace.jpg)
+
+10. Medición con defensa y trazado. `sudo bash bench/bench_con_defensa.sh` mide tres casos (sin defensa, defensa cargada con el archivo sin regla y defensa cargada con regla `deny-exec`) y descarga al terminar; al final avisa con la línea "si quedó cargada: sudo ./build/mmapguard unload". Esos resultados, junto con `strace -c` y el `function_graph` de `security_mmap_file`, están en la Parte III, en "Costos medidos".
 
 ##### Resultados esperados
 
-Por completar.
+| Paso | Esperado | Obtenido |
+| --- | --- | --- |
+| LSM activos | `bpf` en la lista | `capability,landlock,yama,safesetid,selinux,bpf,ima` |
+| `make` | Compila sin advertencias | Compila (`-Werror` activo) |
+| `make test` sin root | 0 FAIL | 49 PASS, 0 FAIL, 7 REQUIERE ROOT |
+| `run_tests.sh` con root | 0 FAIL y 0 REQUIERE ROOT | 64 PASS, 0 FAIL, 0 REQUIERE ROOT |
+| `demo.sh` sin defensa | Los 4 modos PERMITIDO | Los 4 modos PERMITIDO (código 0) |
+| `demo.sh defended` | `shared-write`, `exec` y `mprotect-write` denegados; `private-write` permitido | Tres DENEGADO `errno=1` (código 10) y uno PERMITIDO (código 0) |
+| `make bench` | Tabla de ns por iteración y fallos menores | 1570.0, 16909.2 y 1828.0 ns de mediana; fallos menores 2, 15002 y 2 |
+
+Para la medición con defensa solo hicimos 2 sesiones (la guía pedía 3), así que sus diferencias se leen con cuidado; el detalle está en la Parte III.
 
 ##### Errores comunes y cómo resolverlos
 
 | Error | Causa | Solución |
 | --- | --- | --- |
-| Por completar | Por completar | Por completar |
+| `aviso: falta clang[...]` o `bpftool[...]` al hacer `make` | No hay clang o bpftool en el PATH ni en `TC_PREFIX` | Instalar clang y bpftool, o fijar `TC_PREFIX=<ruta del toolchain>`. El Makefile también busca bpftool en `/usr/lib/linux-tools/*/bpftool` |
+| `WARNING: perf not found for kernel 6.18.54.1-microsoft` y `make bench` omite `perf stat` | El `perf` del PATH es el wrapper de Ubuntu, que busca herramientas del kernel genérico y no del de WSL2 | `bench.sh` y `bench_con_defensa.sh` buscan el perf real en `/usr/lib/linux-tools/*/perf` o `*/bin/perf`; si ninguno funciona avisan y siguen sin perf |
+| `WARNING: bpftool not found for kernel 6.18.54.1-microsoft` | El `bpftool` del PATH es el mismo wrapper de Ubuntu | Usar la ruta real: `$(ls /usr/lib/linux-tools/*/bpftool \| head -1) prog show` |
+| `mmapguard: ya esta cargado (existe /sys/fs/bpf/mmapguard/mg_policy)` | Un `load` anterior dejó la defensa activa | `sudo ./build/mmapguard unload`. La demo, las pruebas y el bench cargan y descargan solos, con descarga aunque algo falle |
+| `strace: no encontrado` | strace no viene instalado en Ubuntu en WSL2 | `sudo apt install -y strace` |
+| `ftrace/tracefs: sin permiso (Permission denied)` | `/sys/kernel/tracing` exige root | Ejecutar el trazado con `sudo` (los resultados de ftrace están en la Parte III) |
 
 ### Estrategia arquitectónica seleccionada
 
@@ -516,14 +629,14 @@ Referencias consultadas:
 
 ### Entregables de código e implementación
 
-Construimos **mmapguard**, la opción C que escogimos en la Parte II: un programa eBPF-LSM que se engancha a `mmap_file` y `file_mprotect`, más un cargador con CLI en espacio de usuario y las pruebas. Todo está en [`mmapguard/`](mmapguard/) y las interfaces entre módulos, en [`mmapguard/CONTRATO.md`](mmapguard/CONTRATO.md). Lo que sí comprobamos en este entorno es que todo compila sin advertencias y que la línea base se comporta como esperábamos. Lo que no pudimos hacer fue **cargar la defensa**: cargar un programa BPF exige root y `sudo -n` falla en nuestro WSL2. Por eso todo lo que depende de la carga quedó escrito, pero sin ejecutar.
+Construimos **mmapguard**, la opción C que escogimos en la Parte II: un programa eBPF-LSM que se engancha a `mmap_file` y `file_mprotect`, más un cargador con CLI en espacio de usuario y las pruebas. Todo está en [`mmapguard/`](mmapguard/) y las interfaces entre módulos, en [`mmapguard/CONTRATO.md`](mmapguard/CONTRATO.md). Todo compila sin advertencias, la línea base se comporta como esperábamos y el sábado 2026-11-07 también **cargamos la defensa** en nuestro WSL2 con `sudo`: el verificador aceptó los programas, la demo con defensa niega lo que debía negar y las pruebas con root dieron 64 PASS. Los resultados y sus capturas están en "Resultados con defensa" y en "Costos medidos".
 
 | Subpunto | Ruta | Estado |
 | --- | --- | --- |
-| 4.1.1 Código C modularizado, compatible con kernel 5.x o 6.x (CO-RE) | `mmapguard/bpf/mmapguard.bpf.c`, `mmapguard/src/` | Compila: clang 18.1.3 para el programa BPF y `gcc -Wall -Wextra -Werror` para el resto, sin advertencias. La carga y la aceptación del verificador quedan POR CONFIRMAR (requieren root) |
-| 4.1.2 Demostración de intercepción de regiones `mmap` | `mmapguard/demo/` | Línea base ejecutada: sin defensa, los cuatro intentos (`shared-write`, `private-write`, `exec`, `mprotect-write`) salieron PERMITIDO. Con defensa: pendiente, `sudo bash demo/demo.sh defended` |
+| 4.1.1 Código C modularizado, compatible con kernel 5.x o 6.x (CO-RE) | `mmapguard/bpf/mmapguard.bpf.c`, `mmapguard/src/` | Compila: clang 18.1.3 para el programa BPF y `gcc -Wall -Wextra -Werror` para el resto, sin advertencias. Con `sudo ./build/mmapguard load --count-faults` el verificador aceptó los programas y la sonda `fentry`; `policy list` salió vacío y `unload` terminó bien |
+| 4.1.2 Demostración de intercepción de regiones `mmap` | `mmapguard/demo/` | Línea base: sin defensa, los cuatro intentos (`shared-write`, `private-write`, `exec`, `mprotect-write`) salieron PERMITIDO. Con defensa (regla `deny-write-shared,deny-exec`): `shared-write`, `exec` y `mprotect-write` salieron DENEGADO con errno=1 y `private-write` PERMITIDO |
 | 4.1.3 Makefile sin advertencias | `mmapguard/Makefile` | `make clean && make` termina con exit 0 y 0 advertencias |
-| 4.1.4 Pruebas con intentos no autorizados y carreras | `mmapguard/tests/` | `make test`: 49 PASS, 0 FAIL y 7 casos REQUIERE ROOT (los que necesitan la defensa cargada) |
+| 4.1.4 Pruebas con intentos no autorizados y carreras | `mmapguard/tests/` | Sin root, `make test`: 49 PASS, 0 FAIL y 7 casos REQUIERE ROOT. Con `sudo`: 64 PASS, 0 FAIL y 0 REQUIERE ROOT |
 
 #### Cómo funciona mmapguard
 
@@ -539,17 +652,27 @@ El archivo protegido se identifica por (dispositivo, inode), leído con CO-RE de
 
 #### Herramientas y entorno
 
-Nuestro WSL2 (Ubuntu 24.04, kernel 6.18.54.1-microsoft-standard-WSL2) trae `CONFIG_BPF_LSM=y`, BTF y `bpf` en `CONFIG_LSM`, pero no traía clang, bpftool ni las cabeceras de libbpf. Sin `sudo` bajamos los paquetes con `apt-get download` y los extrajimos con `dpkg -x` a `~/.mmapguard-tc`: clang 18.1.3, bpftool 7.4.0 y libbpf-dev 1.3.0. En ejecución se usa la `libbpf.so.1` del sistema. Con ese bpftool volcamos el BTF del kernel y verificamos las firmas de los hooks: `bpf_lsm_mmap_file(file, reqprot, prot, flags)` y `bpf_lsm_file_mprotect(vma, reqprot, prot)`, ambas devuelven `int`. Notamos que el envoltorio `security_mmap_file` recibe solo tres argumentos (`file`, `prot`, `flags`); el punto de enganche es el de cuatro. Lo que no pudimos verificar sin root es qué helpers admite el verificador para programas LSM ni la lista de LSM activos (`/sys/kernel/security/lsm` no existe en este WSL2).
+Nuestro WSL2 (Ubuntu 24.04, kernel 6.18.54.1-microsoft-standard-WSL2) trae `CONFIG_BPF_LSM=y`, BTF y `bpf` en `CONFIG_LSM`, pero no traía clang, bpftool ni las cabeceras de libbpf. Al principio, sin `sudo`, bajamos los paquetes con `apt-get download` y los extrajimos con `dpkg -x` a `~/.mmapguard-tc`: clang 18.1.3, bpftool 7.4.0 y libbpf-dev 1.3.0. Con ese bpftool volcamos el BTF del kernel y verificamos las firmas de los hooks: `bpf_lsm_mmap_file(file, reqprot, prot, flags)` y `bpf_lsm_file_mprotect(vma, reqprot, prot)`, ambas devuelven `int`. Notamos que el envoltorio `security_mmap_file` recibe solo tres argumentos (`file`, `prot`, `flags`); el punto de enganche es el de cuatro.
+
+Después, con `sudo`, dejamos el toolchain instalado de forma permanente: clang 18.1.3 y bpftool v7.4.0 con libbpf v1.4, cuyo binario queda en `/usr/lib/linux-tools/*/bpftool` (el `Makefile` lo busca ahí cuando `TC_PREFIX` no lo tiene). Con root también verificamos lo que antes quedaba pendiente: `dmesg` y `/sys/kernel/security/lsm` muestran `lsm=capability,landlock,yama,safesetid,selinux,bpf,ima`, es decir, `bpf` ya estaba activo y no tuvimos que tocar `.wslconfig`. Ojo con dos envoltorios de Ubuntu: tras instalar `linux-tools-generic`, el `perf` y el `bpftool` del PATH son scripts que avisan "perf not found for kernel 6.18.54.1-microsoft" y no sirven en este kernel; por eso los scripts y el `Makefile` buscan los binarios reales en `/usr/lib/linux-tools/`.
 
 #### Ejecución de mmapguard
 
-Desde WSL2, en la carpeta `mmapguard/`:
+Desde WSL2, en la carpeta `mmapguard/`. Lo primero que aprendimos es el orden: **no hay que hacer `load` a mano antes de la demo, las pruebas o el bench**. Cada uno carga la defensa por su cuenta y la descarga al salir (con un `trap`, aunque algo falle); el bench con defensa, además, descarga antes de empezar una carga previa que haya quedado de otra corrida. Cargar a mano antes provoca justo el problema que nos pasó: el `load` siguiente sale con "ya está cargado".
 
-1. Compilar: `make` (usa `TC_PREFIX=$HOME/.mmapguard-tc` por defecto; si falta el toolchain BPF avisa y compila lo que puede).
-2. Pruebas sin root: `make test`.
+1. Compilar: `make` (usa `TC_PREFIX=$HOME/.mmapguard-tc` por defecto y, si ahí no hay `bpftool`, busca el del sistema en `/usr/lib/linux-tools/*/bpftool`; si falta el toolchain BPF avisa y compila lo que puede).
+2. Pruebas sin root: `make test` (49 PASS, 0 FAIL y 7 REQUIERE ROOT).
 3. Demostración de línea base: `bash demo/demo.sh`.
-4. Medición de línea base: `make bench`.
-5. Con root (pendiente en nuestro entorno): `sudo ./build/mmapguard load`, luego `sudo bash demo/demo.sh defended`, `sudo MMAPGUARD=$PWD/build/mmapguard bash tests/run_tests.sh` y `sudo bash bench/bench_con_defensa.sh`. Si el enganche falla porque `bpf` no está en la lista activa de LSM, habría que arrancar el kernel con `lsm=` incluyendo `bpf` (POR CONFIRMAR para WSL2).
+4. Medición de línea base: `make bench` (también compila `build/bench_mmap`, que necesita el bench con defensa).
+5. Con root, cada comando por separado y sin `load` previo:
+   - `sudo MMAPGUARD=$PWD/build/mmapguard bash demo/demo.sh defended`
+   - `sudo MMAPGUARD=$PWD/build/mmapguard bash tests/run_tests.sh`
+   - `sudo bash bench/bench_con_defensa.sh`
+6. Solo si queremos explorar a mano: `sudo ./build/mmapguard load --count-faults`, luego `sudo ./build/mmapguard policy list` y al final `sudo ./build/mmapguard unload`.
+
+`unload` quita los anclajes de `/sys/fs/bpf/mmapguard/` y el kernel desengancha los programas. Solo hace falta ejecutarlo si la defensa quedó cargada, por ejemplo porque se hizo un `load` manual o porque un script murió sin poder correr su `trap`. Para saberlo: `ls /sys/fs/bpf/mmapguard`; si la carpeta existe, `sudo ./build/mmapguard unload`. La demo con defensa y el bench con defensa imprimen ese mismo aviso al terminar ("si quedó cargada: sudo ./build/mmapguard unload").
+
+Para ver los programas cargados con bpftool hay que usar el binario real y no el wrapper del PATH, y con `sudo`: `sudo $(ls /usr/lib/linux-tools/*/bpftool | head -1) prog show`. Si `bpf` no estuviera en la lista activa de LSM, el enganche fallaría y habría que arrancar el kernel con `lsm=` incluyendo `bpf`; en nuestro WSL2 no fue necesario porque ya estaba (se comprueba con `cat /sys/kernel/security/lsm`).
 
 ### Argumentación y análisis de resultados
 
@@ -559,20 +682,138 @@ Nos quedamos con el kernel porque el hook LSM (`mmap_file`, `file_mprotect`) res
 
 Tampoco la vendemos de más. El hook decide cuando se crea o cambia el mapeo, no en cada acceso: con la PTE activa, las lecturas y escrituras corren sin pasar por el hook.
 
-De lo medido solo tenemos la línea base, es decir, el costo de la operación que el hook intercepta: `mmap` más `munmap` tomó 1506.7 ns por iteración (1118.2 a 2693.0) y `mmap_touch` 18393.2 ns, con 2 fallos de página por corrida en el primero y 15002 en el segundo. El overhead de la defensa **no se midió** (NO MEDIDO, Permiso): cargar el programa exige root y no lo tuvimos, así que no afirmamos ninguna cifra de overhead. Entre ejecuciones de WSL2 las medianas cambiaron, por eso las leemos como orden de magnitud. Lo único que demostramos es que, sin defensa, `bash demo/demo.sh` deja PERMITIDO un mapeo compartido con escritura sobre un archivo de prueba. Cargar la defensa queda como paso con `sudo`.
+Lo que medimos son dos cosas. Primero, la línea base, es decir, el costo de la operación que el hook intercepta (`make bench`, más abajo). Segundo, con la defensa cargada, que el hook sí decide: la demo con defensa niega `shared-write`, `exec` y `mprotect-write` con errno=1 y deja pasar `private-write`, y las pruebas con root dieron 64 PASS. El overhead de la defensa lo medimos en 2 sesiones de `bench_con_defensa.sh` (la guía pedía 3) y no lo afirmamos como cifra: en todas las comparaciones los rangos de mínimo a máximo se solapan con los de la línea base de la misma sesión, así que no lo distinguimos del ruido de WSL2. Entre ejecuciones de WSL2 las medianas cambiaron, por eso las leemos como orden de magnitud.
 
-#### Costos medidos (línea base, sin defensa)
+#### Resultados con defensa
 
-| Medición | Comando | Línea base | Con defensa | Diferencia |
+Todo esto lo ejecutamos el sábado 2026-11-07 en nuestro WSL2 (kernel 6.18.54.1-microsoft-standard-WSL2, 12 procesadores), con `sudo`.
+
+**`bpf` está en la lista de LSM activos.** `dmesg | grep -i "LSM: initializing"` y `cat /sys/kernel/security/lsm` muestran `capability,landlock,yama,safesetid,selinux,bpf,ima`; `securityfs` ya estaba montado y no tocamos `.wslconfig`.
+
+![dmesg y lista de LSM activos con bpf](src/capturas/p3/01_lsm_activos_dmesg_securityfs.jpg)
+
+**Carga, verificador y descarga.** `sudo ./build/mmapguard load --count-faults` cargó los programas: el verificador aceptó los dos programas LSM y la sonda `fentry`. `policy list` salió sin reglas y `unload` terminó correctamente.
+
+![load con conteo de fallos, policy list vacío y unload](src/capturas/p3/02_load_verificador_unload.jpg)
+
+**Demo: línea base frente a defensa.** Es el mismo archivo de prueba de 4096 bytes y las mismas cuatro sondas de `mg_probe`; en la corrida con defensa la regla fue `deny-write-shared,deny-exec`. En la línea base la escritura de `shared-write` llegó al archivo.
+
+| Modo | Qué intenta | Línea base (sin defensa) | Con defensa | Códigos de salida (línea base / con defensa) |
 | --- | --- | --- | --- | --- |
-| `mmap_munmap`, ns por iteración | `make bench` | 1506.7 (1118.2 a 2693.0) | NO MEDIDO (Permiso) | n/a |
-| `mmap_touch`, ns por iteración | `make bench` | 18393.2 (16242.4 a 38799.0) | NO MEDIDO (Permiso) | n/a |
-| `mmap_mprotect`, ns por iteración | `make bench` | 1622.5 (1456.9 a 2912.0) | NO MEDIDO (Permiso) | n/a |
-| `mmap_munmap`, fallos de página menores por corrida | `make bench` | 2 (2 a 2) | NO MEDIDO (Permiso) | n/a |
-| `mmap_touch`, fallos de página menores por corrida | `make bench` | 15002 (15002 a 15002) | NO MEDIDO (Permiso) | n/a |
-| `mmap_mprotect`, fallos de página menores por corrida | `make bench` | 2 (2 a 2) | NO MEDIDO (Permiso) | n/a |
+| `shared-write` | `mmap` compartido con escritura | PERMITIDO | DENEGADO errno=1 (Operation not permitted) | 0 / 10 |
+| `private-write` | `mmap` privado con escritura | PERMITIDO | PERMITIDO | 0 / 0 |
+| `exec` | `mmap` con `PROT_EXEC` | PERMITIDO | DENEGADO errno=1 (Operation not permitted) | 0 / 10 |
+| `mprotect-write` | `mprotect` que agrega escritura a un mapeo compartido | PERMITIDO | DENEGADO errno=1 (Operation not permitted) | 0 / 10 |
 
-Medimos cada escenario con 1000 iteraciones por corrida y 10 corridas intercaladas entre escenarios, y reportamos la mediana con el rango (mínimo a máximo) entre paréntesis; los fallos de página salen de la diferencia de `ru_minflt` de `getrusage`. Es una sola ejecución de `make bench` en una sola máquina WSL2 (kernel 6.18.54.1-microsoft-standard-WSL2, 12 procesadores), y otra ejecución dio medianas distintas, así que las leemos como orden de magnitud y no como valor fijo. No pudimos usar `strace` (`command -v strace` no devolvió ninguna ruta) ni ftrace (`ls /sys/kernel/tracing` respondió "Permission denied"); `perf stat -e page-faults,minor-faults` sí funciona sin root y lo usamos solo como segunda lectura. La columna "Con defensa" queda sin medir porque cargar el programa eBPF-LSM exige root; para llenarla se ejecuta `sudo bash bench/bench_con_defensa.sh`.
+![Demo de línea base: los cuatro modos PERMITIDO](src/capturas/p3/03_demo_linea_base.jpg)
+
+![Demo con defensa: tres DENEGADO y un PERMITIDO](src/capturas/p3/04_demo_defendida.jpg)
+
+La demo imprime al final unas líneas "ESPERADO" que son la referencia del diseño y no una medición; lo medido es lo que mostramos arriba (el resultado de cada sonda y su código de salida). Repetimos la demo y los veredictos coincidieron; la primera corrida quedó en esta otra captura, donde cambia el inode del archivo de prueba porque la demo lo crea de nuevo en cada corrida.
+
+![Primera corrida de la demo con defensa](src/capturas/p3/04b_demo_defendida_primera_corrida.jpg)
+
+**Eventos reales.** `mmapguard events --count 8 --timeout 2000` devolvió tres eventos, uno por cada intento denegado, y ninguno para `private-write`, que pasó sin violar la regla:
+
+| Hook | `prot` | `flags` | Veredicto | Sonda que lo causó |
+| --- | --- | --- | --- | --- |
+| `mmap_file` | 0x3 | 0x1 | deny | `shared-write` |
+| `mmap_file` | 0x5 | 0x2 | deny | `exec` |
+| `file_mprotect` | 0x3 | 0x80000f9 | deny | `mprotect-write` |
+
+**Pruebas con root.** `sudo MMAPGUARD=$PWD/build/mmapguard bash tests/run_tests.sh` terminó con RESUMEN 64 PASS, 0 FAIL y 0 REQUIERE ROOT. Sin root, la misma batería da 49 PASS, 0 FAIL y 7 REQUIERE ROOT: esos 7 son los casos que necesitan la defensa cargada, y con `sudo` se ejecutan.
+
+![run_tests con sudo: 64 PASS, 0 FAIL, 0 REQUIERE ROOT](src/capturas/p3/05_tests_con_root_64_pass.jpg)
+
+#### Costos medidos (línea base y con defensa)
+
+Medimos en dos capas. La **línea base** es `make bench` sin defensa. El **costo de la defensa** sale de `sudo bash bench/bench_con_defensa.sh`, que en cada sesión mide tres casos sobre un archivo de 64 KiB: el caso 0 es sin defensa (la referencia de esa misma sesión, antes de cargar), el caso i es con la defensa cargada y el archivo sin regla (el hook hace una búsqueda que falla) y el caso ii es con la defensa cargada y el archivo con la regla `deny-exec` (búsqueda exitosa). En todos los casos usamos 1000 iteraciones por corrida y 10 corridas intercaladas entre escenarios, y reportamos la mediana en ns por iteración con el rango (mínimo a máximo) entre paréntesis.
+
+**Línea base (`make bench`, sin defensa).** La ejecución inicial es la que teníamos antes de cargar la defensa; A y B son dos ejecuciones posteriores del mismo comando.
+
+| Medición | Ejecución inicial | `make bench` A | `make bench` B |
+| --- | --- | --- | --- |
+| `mmap_munmap`, ns por iteración | 1506.7 (1118.2 a 2693.0) | 1570.0 (1157.8 a 4244.1) | 2279.9 (1314.8 a 3556.4) |
+| `mmap_touch`, ns por iteración | 18393.2 (16242.4 a 38799.0) | 16909.2 (15996.1 a 18373.2) | 16461.6 (15765.0 a 20099.9) |
+| `mmap_mprotect`, ns por iteración | 1622.5 (1456.9 a 2912.0) | 1828.0 (1506.3 a 2370.8) | 1673.4 (1193.5 a 5293.8) |
+| `mmap_munmap`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 |
+| `mmap_touch`, fallos de página menores por corrida | 15002 (15002 a 15002) | mediana 15002 | mediana 15002 |
+| `mmap_mprotect`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 |
+
+![make bench con las líneas crudas](src/capturas/p3/06_bench_linea_base.jpg)
+
+**Con defensa (`bench_con_defensa.sh`, dos sesiones).**
+
+| Medición | Sesión A, caso 0 | Sesión A, caso i | Sesión A, caso ii | Sesión B, caso 0 | Sesión B, caso i | Sesión B, caso ii |
+| --- | --- | --- | --- | --- | --- | --- |
+| `mmap_munmap`, ns por iteración | 1419.5 (1168.3 a 3107.9) | 1416.0 (1314.7 a 2386.1) | 1415.6 (1257.1 a 2447.3) | 2026.8 (1178.0 a 3860.8) | 1560.0 (1289.1 a 2738.5) | 1876.8 (1312.0 a 6143.3) |
+| `mmap_touch`, ns por iteración | 16206.7 (15705.0 a 19771.0) | 16656.2 (16174.5 a 18516.3) | 16380.3 (16014.9 a 22294.4) | 17537.9 (16425.9 a 52970.6) | 18229.4 (16304.2 a 20958.0) | 18126.2 (17209.6 a 58434.5) |
+| `mmap_mprotect`, ns por iteración | 1582.1 (1496.6 a 2363.8) | 1877.3 (1756.0 a 1918.7) | 1826.8 (1735.8 a 1977.2) | 1888.0 (1514.5 a 3226.0) | 1966.7 (1822.5 a 3002.6) | 2133.2 (1760.5 a 3312.2) |
+
+Sesión A, casos 0, i y ii:
+
+![Sesión A, caso 0: sin defensa](src/capturas/p3/07_bench_defensa_sesion_a_caso0.jpg)
+
+![Sesión A, caso i: defensa cargada y archivo sin regla](src/capturas/p3/08_bench_defensa_sesion_a_casoi.jpg)
+
+![Sesión A, caso ii: defensa cargada y regla deny-exec](src/capturas/p3/09_bench_defensa_sesion_a_casoii.jpg)
+
+Sesión B, casos 0, i y ii:
+
+![Sesión B, caso 0: sin defensa](src/capturas/p3/10_bench_defensa_sesion_b_caso0.jpg)
+
+![Sesión B, caso i: defensa cargada y archivo sin regla](src/capturas/p3/11_bench_defensa_sesion_b_casoi.jpg)
+
+![Sesión B, caso ii: defensa cargada y regla deny-exec](src/capturas/p3/12_bench_defensa_sesion_b_casoii.jpg)
+
+**Diferencias contra el caso 0 de la misma sesión.** La diferencia es la mediana con defensa menos la mediana del caso 0 de la misma sesión (en ns), y el porcentaje es la diferencia dividida entre el caso 0 por 100. Los cálculos salen de un script de Python que lee las medianas y los rangos de la tabla anterior; la salida que sigue es la que imprimió, sin redondear distinto:
+
+```
+python3 calc_diff.py
+```
+
+Para comprobar a mano una celda, la sesión A de `mmap_mprotect` en el caso i sale con `python3 -c "print(round(1877.3-1582.1,1), round((1877.3-1582.1)/1582.1*100,1))"`, que imprime `295.2 18.7`.
+
+| Medición | Sesión | Caso | Caso 0, mediana (mín. a máx.) | Caso con defensa, mediana (mín. a máx.) | Diferencia (ns) | Porcentaje (%) | Rangos se solapan |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `mmap_munmap` | A | i | 1419.5 (1168.3 a 3107.9) | 1416.0 (1314.7 a 2386.1) | -3.5 | -0.2 | sí |
+| `mmap_munmap` | A | ii | 1419.5 (1168.3 a 3107.9) | 1415.6 (1257.1 a 2447.3) | -3.9 | -0.3 | sí |
+| `mmap_munmap` | B | i | 2026.8 (1178.0 a 3860.8) | 1560.0 (1289.1 a 2738.5) | -466.8 | -23.0 | sí |
+| `mmap_munmap` | B | ii | 2026.8 (1178.0 a 3860.8) | 1876.8 (1312.0 a 6143.3) | -150.0 | -7.4 | sí |
+| `mmap_touch` | A | i | 16206.7 (15705.0 a 19771.0) | 16656.2 (16174.5 a 18516.3) | +449.5 | +2.8 | sí |
+| `mmap_touch` | A | ii | 16206.7 (15705.0 a 19771.0) | 16380.3 (16014.9 a 22294.4) | +173.6 | +1.1 | sí |
+| `mmap_touch` | B | i | 17537.9 (16425.9 a 52970.6) | 18229.4 (16304.2 a 20958.0) | +691.5 | +3.9 | sí |
+| `mmap_touch` | B | ii | 17537.9 (16425.9 a 52970.6) | 18126.2 (17209.6 a 58434.5) | +588.3 | +3.4 | sí |
+| `mmap_mprotect` | A | i | 1582.1 (1496.6 a 2363.8) | 1877.3 (1756.0 a 1918.7) | +295.2 | +18.7 | sí |
+| `mmap_mprotect` | A | ii | 1582.1 (1496.6 a 2363.8) | 1826.8 (1735.8 a 1977.2) | +244.7 | +15.5 | sí |
+| `mmap_mprotect` | B | i | 1888.0 (1514.5 a 3226.0) | 1966.7 (1822.5 a 3002.6) | +78.7 | +4.2 | sí |
+| `mmap_mprotect` | B | ii | 1888.0 (1514.5 a 3226.0) | 2133.2 (1760.5 a 3312.2) | +245.2 | +13.0 | sí |
+
+**Criterio y veredicto.** Seguimos el criterio de la guía: una diferencia solo es defendible si el signo se repite en las sesiones y los rangos de mínimo a máximo no se solapan. El signo se repite en las dos sesiones en los seis pares de medición y caso, pero los rangos se solapan en las 12 comparaciones, así que ninguna diferencia es defendible y las seis salen "no se distingue del ruido":
+
+| Medición | Caso | Signo sesión A | Signo sesión B | Signo se repite | Algún par se solapa | Veredicto |
+| --- | --- | --- | --- | --- | --- | --- |
+| `mmap_munmap` | i | - | - | sí | sí | no se distingue del ruido |
+| `mmap_munmap` | ii | - | - | sí | sí | no se distingue del ruido |
+| `mmap_touch` | i | + | + | sí | sí | no se distingue del ruido |
+| `mmap_touch` | ii | + | + | sí | sí | no se distingue del ruido |
+| `mmap_mprotect` | i | + | + | sí | sí | no se distingue del ruido |
+| `mmap_mprotect` | ii | + | + | sí | sí | no se distingue del ruido |
+
+Qué leemos de ahí, con cuidado. En `mmap_munmap` las diferencias salen negativas (de -0.2 % a -23.0 %), y no esperamos que una defensa haga el `mmap` más rápido: es la señal de que ese ruido es del tamaño de lo que buscábamos. En `mmap_touch` las diferencias son positivas pero pequeñas (de +1.1 % a +3.9 %). En `mmap_mprotect` las cuatro diferencias son positivas (de +4.2 % a +18.7 %, es decir, de +78.7 a +295.2 ns), lo que sería lo esperable si el hook de `file_mprotect` se paga en cada llamada, pero con rangos que se solapan no lo afirmamos como cifra. Y son solo **2 sesiones**: la guía pedía 3, y una tercera sesión de `bench_con_defensa.sh` queda pendiente.
+
+**Conteo y traza (strace y ftrace).** Con `sudo` pudimos usar dos herramientas que antes no teníamos. Aquí no sirven para comparar tiempos: el tracer infla lo que mide.
+
+| Herramienta | Comando | Resultado | Nota |
+| --- | --- | --- | --- |
+| `strace` | `strace -c -f -e trace=mmap,munmap,mprotect build/bench_mmap mmap_mprotect /tmp/p.bin 1000` | `mmap` 1024 llamadas, `munmap` 1017, `mprotect` 1019, total 3060, 11 usecs/call | Los 11 usecs/call están inflados por `ptrace`: sirve para contar llamadas, no para medir tiempo. Que haya algo más de 1000 llamadas por tipo, con 1000 iteraciones, creemos que se debe al arranque del proceso (POR CONFIRMAR) |
+| `ftrace` (`function_graph`) | `security_mmap_file` sobre `mmap_munmap` con 100 iteraciones, sin defensa cargada | La llamada recorre `selinux_mmap_file`, `inode_has_perm`, `avc_has_perm`, `bpf_lsm_mmap_file()` y `ima_file_mmap`. `bpf_lsm_mmap_file()` tomó 0.066 us porque no había ningún programa BPF enganchado; una llamada completa a `security_mmap_file` tomó 17.959 us | La traza infla los tiempos: 17.959 us no se compara con los ns por iteración del bench, solo muestra qué funciones atraviesa el hook y que, sin defensa, el punto de enganche de BPF está vacío |
+
+![strace -c sobre mmap_mprotect: 1024, 1017 y 1019 llamadas](src/capturas/p3/13_strace_conteo_syscalls.jpg)
+
+![function_graph de security_mmap_file](src/capturas/p3/14_ftrace_security_mmap_file.jpg)
+
+**Qué cambió con `perf`.** En la ejecución inicial `perf stat -e page-faults,minor-faults` funcionaba sin root y dio 58, 15299 y 59 page-faults; lo usábamos como segunda lectura de los fallos de página. Después de instalar `linux-tools-generic`, el `perf` del PATH pasó a ser el wrapper de Ubuntu y `make bench` empezó a avisar "perf stat: no funciona sin root; se omite". Por eso la columna de fallos de página de las ejecuciones A y B solo usa `getrusage` (`ru_minflt`), que no depende de `perf`. `bench.sh` y `bench_con_defensa.sh` ya buscan el `perf` real en `/usr/lib/linux-tools/*/perf` y `*/bin/perf`; repetir `make bench` para recuperar esa lectura queda pendiente.
 
 #### Limitaciones y trabajo futuro
 
@@ -580,10 +821,10 @@ Medimos cada escenario con 1000 iteraciones por corrida y 10 corridas intercalad
 | --- | --- | --- | --- |
 | Decide al crear o cambiar el mapeo, no por acceso | Los hooks `mmap_file` y `file_mprotect` actúan cuando nace o cambia el VMA. Con la PTE activa, las lecturas y escrituras no pasan por Ring 0 de forma observable por el hook, así que un mapeo permitido no se vuelve a evaluar. | Párrafo "Límite de cobertura" de la Parte II. La sonda `fentry/handle_mm_fault` de `bpf/mmapguard.bpf.c` solo incrementa `mg_stats`: cuenta fallos, no decide. | Cubrir los fallos de página con otro mecanismo que pueda decidir y no solo contar. |
 | Solo cubre `mmap` y `mprotect` nuevos | No reevalúa mapeos creados antes de cargar la defensa y no controla `read` ni `write` por syscalls normales sobre el archivo. | `bpf/mmapguard.bpf.c` define únicamente dos programas LSM: `mg_mmap_file` y `mg_file_mprotect`. | Recorrer los mapeos ya existentes al cargar y evaluar hooks de lectura y escritura de archivo. |
-| Exige `bpf` en la lista de LSM y privilegios | Sin `bpf` activo en `lsm=` el enganche falla, y cargar o descargar pide root o CAP_BPF. Un root con CAP_BPF puede descargar el programa. La carga real NO se probó (POR CONFIRMAR). | `sudo -n` falla en este entorno y `/sys/kernel/security/lsm` no se puede leer. `src/mmapguard.c` ya avisa "ejecutar con sudo" y pide verificar ese archivo. | Probar la carga en un entorno con root y con `bpf` en `lsm=`, y estudiar cómo impedir la descarga. |
-| Identifica el archivo por (dev, inode), no por ruta | Un archivo recreado con otro inode escapa de la regla. En el 9p de `/mnt/c` de WSL, la estabilidad del inode está POR CONFIRMAR. Los enlaces duros comparten inode y quedan protegidos por esa misma razón (consecuencia del diseño, no probada). | `bpf/mmapguard.bpf.c` lee `i_sb->s_dev` e `i_ino` con CO-RE, y `src/policy.c` arma la llave desde `stat`. | Medir la estabilidad del inode en 9p y renovar la regla cuando el archivo se recree. |
-| Helpers y verificador sin comprobar | Los helpers permitidos para `BPF_PROG_TYPE_LSM` y la aceptación del verificador no se pudieron verificar sin root (POR CONFIRMAR). Las firmas de los hooks sí se verificaron. | Las firmas salen de `bpftool btf dump file /sys/kernel/btf/vmlinux` en el kernel 6.18.54.1 (tabla de `mmapguard/CONTRATO.md`). | Cargar el programa con root y registrar la salida del verificador. |
-| Costo de la defensa sin cifra | La medición con defensa no se hizo (Permiso). Solo existe la línea base, con ruido grande entre ejecuciones de WSL2. | `make bench`: `mmap_munmap` 1506.7 ns (1118.2 a 2693.0), `mmap_touch` 18393.2 ns (16242.4 a 38799.0), `mmap_mprotect` 1622.5 ns (1456.9 a 2912.0). Otra ejecución dio medianas distintas. | Correr `sudo bash bench/bench_con_defensa.sh` y comparar contra esa línea base. |
+| Exige `bpf` en la lista de LSM y privilegios | Sin `bpf` activo en `lsm=` el enganche falla, y cargar o descargar pide root o CAP_BPF. Un root con CAP_BPF puede descargar el programa. | En nuestro WSL2 `bpf` ya estaba en la lista (`capability,landlock,yama,safesetid,selinux,bpf,ima`) y `load`, `policy list` y `unload` funcionaron con `sudo`. No probamos un kernel sin `bpf` en `lsm=`. | Estudiar cómo impedir la descarga por un root y repetir la prueba en un kernel donde `bpf` no esté activo. |
+| Identifica el archivo por (dev, inode), no por ruta | Un archivo recreado con otro inode escapa de la regla. En el 9p de `/mnt/c` de WSL, la estabilidad del inode está POR CONFIRMAR. Los enlaces duros comparten inode y quedan protegidos por esa misma razón (consecuencia del diseño, no probada). | `bpf/mmapguard.bpf.c` lee `i_sb->s_dev` e `i_ino` con CO-RE, y `src/policy.c` arma la llave desde `stat`. En la demo el inode del archivo de prueba cambió entre corridas porque se recrea cada vez. | Medir la estabilidad del inode en 9p y renovar la regla cuando el archivo se recree. |
+| Helpers permitidos sin enumerar | El verificador aceptó los programas y la sonda `fentry`, pero no enumeramos qué helpers admite en total el tipo `BPF_PROG_TYPE_LSM` (POR CONFIRMAR). Las firmas de los hooks sí se verificaron. | `load --count-faults` terminó sin rechazo del verificador. Las firmas salen de `bpftool btf dump file /sys/kernel/btf/vmlinux` en el kernel 6.18.54.1 (tabla de `mmapguard/CONTRATO.md`). | Listar los helpers disponibles para programas LSM y registrar la salida detallada del verificador. |
+| Costo de la defensa dentro del ruido | Medimos 2 sesiones de `bench_con_defensa.sh` (la guía pedía 3) y en todos los pares los rangos de mínimo a máximo se solapan con el caso 0 de la misma sesión: no distinguimos el costo del ruido de WSL2. | Tablas de "Costos medidos": por ejemplo `mmap_mprotect` fue de +4.2 % a +18.7 % sobre el caso 0, pero con rangos solapados; `mmap_munmap` salió negativo en las cuatro comparaciones. | Correr una tercera sesión de `sudo bash bench/bench_con_defensa.sh` y, si se puede, medir fuera de WSL2 para reducir el ruido. |
 
 Dejamos las seis a la vista porque la rúbrica pide limitaciones, y ninguna es un error del código: todas son consecuencia de la opción C que escogimos.
 
