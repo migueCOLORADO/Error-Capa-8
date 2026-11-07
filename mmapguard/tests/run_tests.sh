@@ -6,6 +6,9 @@
 # binario indicado en la variable MMAPGUARD, por ejemplo:
 #   sudo MMAPGUARD=/ruta/a/mmapguard bash tests/run_tests.sh
 # Si faltan, se imprimen como [REQUIERE ROOT] y no cuentan como fallo.
+# Con root no hace falta un `load` previo: las pruebas cargan la defensa y la descargan solas
+# (trap, aunque algo falle). Si MMAPGUARD no se define, usa build/mmapguard cuando existe.
+# Si la defensa quedo cargada: sudo ./build/mmapguard unload
 #
 # Variables: MMAPGUARD (binario de la CLI), MG_RACE_ITERS (iteraciones por hilo, 2000),
 #            MG_RACE_THREADS (hilos, 8).
@@ -14,6 +17,9 @@ set -u
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAIZ="$(cd "$AQUI/.." && pwd)"
 MMAPGUARD="${MMAPGUARD:-}"
+if [ -z "$MMAPGUARD" ] && [ -x "$RAIZ/build/mmapguard" ]; then
+    MMAPGUARD="$RAIZ/build/mmapguard"
+fi
 
 PASS=0
 FAIL=0
@@ -29,7 +35,7 @@ mkdir -p "$BIN"
 
 limpiar() {
     if [ "$CARGADO" -eq 1 ] && [ -n "$MMAPGUARD" ]; then
-        "$MMAPGUARD" unload >/dev/null 2>&1
+        "$MMAPGUARD" unload >/dev/null 2>&1 || echo "AVISO: 'mmapguard unload' fallo; ejecutar: sudo ./build/mmapguard unload" >&2
         CARGADO=0
     fi
     rm -rf "$TMP"
@@ -128,6 +134,12 @@ if [ "$(id -u)" -eq 0 ] && [ -n "$MMAPGUARD" ] && [ -x "$MMAPGUARD" ]; then
     head -c 32768 /dev/zero >"$PROT"
     cp "$PROT" "$ORIG"
     INO="$(stat -c %i "$PROT")"
+
+    # Una corrida anterior que murio sin trap deja la defensa cargada y load diria "ya esta cargado".
+    if [ -e /sys/fs/bpf/mmapguard ]; then
+        echo "aviso: quedaba una carga previa en /sys/fs/bpf/mmapguard; se descarga antes de empezar"
+        "$MMAPGUARD" unload >/dev/null 2>&1
+    fi
 
     if "$MMAPGUARD" load >"$TMP/load.out" 2>&1; then
         CARGADO=1

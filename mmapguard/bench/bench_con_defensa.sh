@@ -14,7 +14,12 @@
 #   (i) defensa cargada, archivo SIN regla en mg_policy (el hook hace una busqueda fallida)
 #   (ii) defensa cargada, archivo CON la regla deny-exec (busqueda exitosa; el mapeo
 #        compartido con escritura esta permitido con esa regla, por lo que no hay violacion)
-# La defensa se descarga al salir (trap), tambien ante error o Ctrl+C.
+# No exige un `load` manual previo: el script carga la defensa solo (si quedaba una carga previa
+# de otra corrida, la descarga antes de empezar) y la descarga al salir (trap), tambien ante
+# error o Ctrl+C.
+#
+# AVISO: si el script muere sin poder ejecutar el trap y la defensa quedo cargada:
+#   sudo ./build/mmapguard unload
 #
 # Codigos de salida: 0 ok, 2 error al cargar o medir, 3 falta root o un binario.
 set -u
@@ -38,11 +43,25 @@ if [ ! -x "$BENCH_BIN" ]; then
     exit 3
 fi
 
+# Mismo criterio que bench.sh: un perf que funcione de verdad (no el wrapper de Ubuntu).
+detectar_perf() {
+    local c v
+    PERF=""
+    for c in "$(command -v perf 2>/dev/null)"         "/usr/lib/linux-tools/$(uname -r)/bin/perf"         /usr/lib/linux-tools/*/perf /usr/lib/linux-tools/*/bin/perf; do
+        { [ -n "$c" ] && [ -x "$c" ]; } || continue
+        v="$(timeout 10 "$c" --version 2>&1)" || continue
+        case "$v" in *WARNING*) continue ;; esac
+        PERF="$c"
+        return 0
+    done
+    return 1
+}
+
 CARGADO=0
 TMP=""
 limpiar() {
     if [ "$CARGADO" -eq 1 ]; then
-        "$MG" unload >/dev/null 2>&1
+        "$MG" unload >/dev/null 2>&1 || echo "AVISO: 'mmapguard unload' fallo; ejecutar: sudo ./build/mmapguard unload"
         CARGADO=0
     fi
     [ -n "$TMP" ] && rm -rf "$TMP"
@@ -69,6 +88,23 @@ medir() {
 }
 
 echo "kernel=$(uname -r) nproc=$(nproc)"
+echo "aviso: si quedo cargada: sudo ./build/mmapguard unload"
+
+# Informa del perf que usaria bench.sh (aqui corre como root, asi que bench.sh no lo usa).
+if detectar_perf; then
+    echo "perf: $PERF funciona, pero con root no se usa en esta medicion"
+else
+    echo "aviso: no hay un perf que funcione (wrapper de Ubuntu o ausente); se sigue sin perf"
+fi
+
+# Si una corrida anterior dejo la defensa cargada, load fallaria con "ya esta cargado": se descarga antes.
+if [ -e /sys/fs/bpf/mmapguard ]; then
+    echo "aviso: quedaba una carga previa en /sys/fs/bpf/mmapguard; se descarga antes de empezar"
+    "$MG" unload || {
+        echo "bench_con_defensa: no se pudo descargar la carga previa; ejecutar: sudo ./build/mmapguard unload"
+        exit 2
+    }
+fi
 
 medir "caso 0: sin defensa cargada (referencia de esta sesion)"
 
@@ -93,4 +129,5 @@ EV="$("$MG" events --timeout 300 2>&1 | wc -l)"
 echo "eventos de violacion en el ringbuf tras la medicion: $EV (esperado 0)"
 
 "$MG" policy del "$ARCHIVO" >/dev/null 2>&1
+echo "la defensa se descarga al salir; si quedo cargada: sudo ./build/mmapguard unload"
 exit 0

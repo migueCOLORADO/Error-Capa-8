@@ -7,7 +7,9 @@
 #             (o usa MG_PROBE), corre los 4 modos y muestra las salidas reales.
 #   defended  Con defensa. Exige root y el binario mmapguard (variable MMAPGUARD,
 #             ../mmapguard o build/mmapguard). Carga, agrega la politica, corre los 4 modos,
-#             muestra los eventos y descarga (trap, aunque algo falle).
+#             muestra los eventos y descarga (trap, aunque algo falle). No exige un `load`
+#             manual previo; si quedaba una carga de otra corrida, la descarga antes de empezar.
+#             Si la defensa quedo cargada: sudo ./build/mmapguard unload
 #
 # Codigos de salida: 0 ok, 1 uso, 2 error de ejecucion (compilacion, load, policy),
 #                    3 faltan requisitos de defended (root o binario), 4 resultado de baseline inesperado.
@@ -30,7 +32,7 @@ BIN=""
 
 limpiar() {
     if [ "$LOADED" -eq 1 ] && [ -n "$BIN" ]; then
-        "$BIN" unload >/dev/null 2>&1 || echo "AVISO: 'mmapguard unload' fallo; revisar /sys/fs/bpf/mmapguard" >&2
+        "$BIN" unload >/dev/null 2>&1 || echo "AVISO: 'mmapguard unload' fallo; revisar /sys/fs/bpf/mmapguard y ejecutar: sudo ./build/mmapguard unload" >&2
         LOADED=0
     fi
     if [ -n "$TMPD" ] && [ -d "$TMPD" ]; then
@@ -119,6 +121,13 @@ demo_defended() {
     echo "=== DEFENDED: con mmapguard ($BIN) ==="
     echo "archivo de prueba: $ARCHIVO ($(stat -c %s "$ARCHIVO") bytes)"
 
+    echo "aviso: si quedo cargada: sudo ./build/mmapguard unload"
+    # Una corrida anterior que murio sin trap deja la defensa cargada y load diria "ya esta cargado".
+    if [ -e /sys/fs/bpf/mmapguard ]; then
+        echo "aviso: quedaba una carga previa en /sys/fs/bpf/mmapguard; se descarga antes de empezar"
+        "$BIN" unload || { echo "ERROR: no se pudo descargar la carga previa; ejecutar: sudo ./build/mmapguard unload" >&2; exit 2; }
+    fi
+
     LOADED=1
     if ! "$BIN" load; then
         echo "ERROR: 'mmapguard load' fallo" >&2
@@ -140,6 +149,7 @@ demo_defended() {
     echo "--- ESPERADO (referencia del diseno; NO MEDIDO, no es salida de esta ejecucion) ---"
     echo "ESPERADO shared-write=DENEGADO errno=1; exec=DENEGADO errno=1; mprotect-write=DENEGADO errno=1; private-write=PERMITIDO"
     echo "(codigos esperados: 10, 10, 10 y 0 respectivamente)"
+    echo "(la defensa se descarga al salir con 'mmapguard unload'; si quedo cargada: sudo ./build/mmapguard unload)"
     # limpiar() descarga con 'mmapguard unload' al salir
 }
 

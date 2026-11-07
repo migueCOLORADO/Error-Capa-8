@@ -3,7 +3,10 @@
 # Objetivos: all (= bpf + user), bpf, user, test, clean, help.
 #
 # Toolchain de usuario (sin root): TC_PREFIX (por defecto ~/.mmapguard-tc) con clang, bpftool
-# y las cabeceras de libbpf. Si no existe se usan clang y bpftool del PATH. Si falta alguno,
+# y las cabeceras de libbpf. Si no existe se usan clang y bpftool del sistema: bpftool se busca en
+# el PATH y en /usr/lib/linux-tools/*/bpftool (el de /usr/sbin en Ubuntu es un wrapper que falla si
+# falta el paquete del kernel en uso, por eso cada candidato se prueba con `--version`).
+# TC_PREFIX sigue siendo prioritario si existe. Si falta alguno,
 # `make bpf` y `make user` avisan en una linea y terminan con exito (exit 0): solo se
 # construyen policy.o y events.o con gcc, que no necesitan libbpf ni toolchain BPF.
 #
@@ -11,9 +14,14 @@
 
 TC_PREFIX ?= $(HOME)/.mmapguard-tc
 
-# Valores por defecto: toolchain de usuario si existe; si no, el del PATH.
+# bpftool del sistema que funcione de verdad (`--version` con codigo 0): primero el del PATH, luego
+# /usr/lib/linux-tools/<kernel en uso>/bpftool y despues /usr/lib/linux-tools/*/bpftool. Vacio si ninguno sirve.
+SYS_BPFTOOL := $(shell for b in "$$(command -v bpftool 2>/dev/null)" "/usr/lib/linux-tools/$$(uname -r)/bpftool" /usr/lib/linux-tools/*/bpftool; do if [ -n "$$b" ] && [ -x "$$b" ] && "$$b" --version >/dev/null 2>&1; then echo "$$b"; break; fi; done)
+
+# Valores por defecto: toolchain de usuario si existe; si no, el del sistema (el bpftool de
+# /usr/lib/linux-tools si el del PATH es el wrapper de Ubuntu que falla).
 CLANG   ?= $(if $(wildcard $(TC_PREFIX)/usr/lib/llvm-18/bin/clang),$(TC_PREFIX)/usr/lib/llvm-18/bin/clang,clang)
-BPFTOOL ?= $(if $(wildcard $(TC_PREFIX)/usr/lib/linux-tools-*/bpftool),$(firstword $(wildcard $(TC_PREFIX)/usr/lib/linux-tools-*/bpftool)),bpftool)
+BPFTOOL ?= $(if $(wildcard $(TC_PREFIX)/usr/lib/linux-tools-*/bpftool),$(firstword $(wildcard $(TC_PREFIX)/usr/lib/linux-tools-*/bpftool)),$(if $(SYS_BPFTOOL),$(SYS_BPFTOOL),bpftool))
 
 # Bibliotecas del toolchain de usuario para clang y bpftool.
 export LD_LIBRARY_PATH := $(TC_PREFIX)/usr/lib/x86_64-linux-gnu:$(TC_PREFIX)/usr/lib/llvm-18/lib$(if $(LD_LIBRARY_PATH),:$(LD_LIBRARY_PATH))

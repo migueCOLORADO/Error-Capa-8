@@ -8,6 +8,8 @@
 # iteracion y la mediana (y rango) de fallos de pagina menores por corrida.
 # Usa un archivo de 64 KiB en un directorio temporal de /tmp que se borra al salir.
 # Como segunda lectura usa `perf stat -e page-faults,minor-faults` solo si funciona sin root.
+# El perf se detecta de verdad (ver detectar_perf): el wrapper de Ubuntu no cuenta; si ningun
+# perf sirve, avisa en una linea y sigue sin perf.
 # Informa tambien si strace y ftrace/tracefs estan disponibles; no instala nada.
 #
 # Variables: BENCH_ITER (1000), BENCH_RUNS (10), BENCH_BIN (build/bench_mmap),
@@ -38,6 +40,25 @@ limpiar() {
 trap limpiar EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Busca un perf que funcione de verdad: `perf --version` con codigo 0 y sin la linea WARNING
+# del wrapper de Ubuntu (/usr/bin/perf cuando falta el paquete de este kernel). Prueba el PATH,
+# luego el del kernel en uso y despues /usr/lib/linux-tools/*/perf y /usr/lib/linux-tools/*/bin/perf.
+# Deja la ruta elegida en PERF (vacia si ninguno sirve) y devuelve 0 solo si hay uno.
+detectar_perf() {
+    local c v
+    PERF=""
+    for c in "$(command -v perf 2>/dev/null)" \
+        "/usr/lib/linux-tools/$(uname -r)/bin/perf" \
+        /usr/lib/linux-tools/*/perf /usr/lib/linux-tools/*/bin/perf; do
+        { [ -n "$c" ] && [ -x "$c" ]; } || continue
+        v="$(timeout 10 "$c" --version 2>&1)" || continue
+        case "$v" in *WARNING*) continue ;; esac
+        PERF="$c"
+        return 0
+    done
+    return 1
+}
 
 TMPDIR_B="$(mktemp -d /tmp/mmapguard-bench.XXXXXX)" || {
     echo "bench.sh: no se pudo crear el directorio temporal en /tmp" >&2
@@ -113,15 +134,16 @@ cat "$RAW"
 
 # ---- segunda lectura con perf stat, solo si funciona sin root ----
 echo "-- perf stat (segunda lectura) --"
-if command -v perf >/dev/null 2>&1; then
+if detectar_perf; then
+    echo "perf: usando $PERF ($(timeout 10 "$PERF" --version 2>&1 | head -n 1))"
     if [ "$(id -u)" -eq 0 ]; then
         echo "perf stat: se omite porque se ejecuta como root; la segunda lectura se pide sin root"
-    elif timeout 20 perf stat -x, -e page-faults,minor-faults -o "$TMPDIR_B/perf.probe" true >/dev/null 2>&1 \
+    elif timeout 20 "$PERF" stat -x, -e page-faults,minor-faults -o "$TMPDIR_B/perf.probe" true >/dev/null 2>&1 \
         && grep -q 'page-faults' "$TMPDIR_B/perf.probe"; then
         echo "perf stat funciona sin root; una corrida adicional por escenario (cuenta el proceso completo, incluido el arranque)"
         printf "%-14s %14s %14s\n" "escenario" "page-faults" "minor-faults"
         for e in $ESCENARIOS; do
-            if timeout 120 perf stat -x, -e page-faults,minor-faults -o "$TMPDIR_B/perf.$e" -- \
+            if timeout 120 "$PERF" stat -x, -e page-faults,minor-faults -o "$TMPDIR_B/perf.$e" -- \
                 "$BIN" "$e" "$ARCHIVO" "$ITER" >/dev/null 2>&1; then
                 pf="$(awk -F, '$3 ~ /^page-faults/ { print $1 }' "$TMPDIR_B/perf.$e")"
                 mf="$(awk -F, '$3 ~ /^minor-faults/ { print $1 }' "$TMPDIR_B/perf.$e")"
@@ -134,7 +156,7 @@ if command -v perf >/dev/null 2>&1; then
         echo "perf stat: no funciona sin root en este sistema; se omite"
     fi
 else
-    echo "perf: no encontrado; se omite la segunda lectura"
+    echo "aviso: no hay un perf que funcione (el del PATH falta o es el wrapper de Ubuntu, y /usr/lib/linux-tools/*/perf y */bin/perf no sirven); se sigue sin perf, sin contadores de page-faults de perf"
 fi
 
 # ---- herramientas opcionales ----
