@@ -2,7 +2,7 @@
 
 Parcial 3 de Sistemas Operativos SO2026B (valor: 25% de la nota), en equipo: Miguel Ángel Colorado Castaño y Sebastián Andrés Ibarra Prada. Tema: **seguridad de archivos mediante intervención en la capa del kernel y mapeo de memoria (`mmap`)**. Referencia base del profesor: [USOS/CapaKernel](https://github.com/evalenciEAFIT/SO2026B/tree/main/USOS/CapaKernel).
 
-Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base heredada**: el shell educativo `eafitOS`, el editor de texto por líneas y el compresor Huffman concurrente. Esa base se conserva al final de este README. La implementación del Parcial 3 (Parte III) vive en [`mmapguard/`](mmapguard/): compila y pasa las pruebas que no necesitan root, pero no pudimos cargar la defensa en nuestro WSL2 por falta de permisos; la Parte III explica qué quedó medido y qué queda por ejecutar con `sudo`.
+Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base heredada**: el shell educativo `eafitOS`, el editor de texto por líneas y el compresor Huffman concurrente. Esa base se conserva al final de este README. La implementación del Parcial 3 (Parte III) vive en [`mmapguard/`](mmapguard/): compila sin advertencias; cargamos la defensa con `sudo` en nuestro WSL2 y las pruebas con root dieron 64 PASS, 0 FAIL. La Parte III presenta lo medido.
 
 ## Índice
 1. [Entregables según la rúbrica](#entregables-según-la-rúbrica)
@@ -76,13 +76,13 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
 | Entregable | Dónde | Estado |
 | --- | --- | --- |
 | Código fuente y Makefile | [`mmapguard/`](mmapguard/) | Escrito y compilado sin advertencias; cargamos la defensa con `sudo` y las pruebas con root dieron 64 PASS, 0 FAIL |
-| README explicativo | Este archivo | Parte I, Parte II y Parte III documentadas, con la medición con defensa en 2 sesiones (la guía pedía 3) |
-| Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](src/docx/Estrategia%20Parcial%203.pdf) | En construcción: el README se completa con la Parte III |
+| README explicativo | Este archivo | Parte I, Parte II y Parte III documentadas, con la medición con defensa en 3 sesiones |
+| Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](src/docx/Estrategia%20Parcial%203.pdf) | Completo: Parte I, Parte II y Parte III |
 | Evidencia individual | Buzón de interactiva EAFIT; la sube cada integrante | Pendiente |
 
 ### Estrategia en PDF
 
-Documento de la estrategia del equipo para el Parcial 3: [Estrategia Parcial 3 (PDF)](src/docx/Estrategia%20Parcial%203.pdf).
+Documento de la estrategia del equipo para el Parcial 3: [Estrategia Parcial 3 (PDF)](src/docx/Estrategia%20Parcial%203.pdf). El PDF es del 6 de noviembre de 2026, anterior a la ejecución con `sudo`; los resultados medidos están en la Parte III de este README. El plan del PDF nombra `~/mg_build` como carpeta de compilación; la ruta final del toolchain es `~/.mmapguard-tc` y los binarios quedan en `mmapguard/build/`.
 
 ## Parte I: Análisis conceptual y preguntas diagnósticas (30%)
 
@@ -209,7 +209,7 @@ Las capturas de los prompts se guardan en la carpeta `src/capturas/3.1/`.
 
 | Prompt | Archivo | Estado |
 | --- | --- | --- |
-| P1 | `src/capturas/3.1/P1.png` | Pendiente |
+| P1 | `src/capturas/3.1/P1.1.jpg`, `src/capturas/3.1/P1.2.jpg` | Insertada |
 | P2 | `src/capturas/3.1/P2.png` | Pendiente |
 | P3 | `src/capturas/3.1/P3.png` | Pendiente |
 | P4 | `src/capturas/3.1/P4.png` | Pendiente |
@@ -220,6 +220,15 @@ Las capturas de los prompts se guardan en la carpeta `src/capturas/3.1/`.
 | P9 | `src/capturas/3.1/P9.png` | Pendiente |
 | P10 | `src/capturas/3.1/P10.png` | Pendiente |
 | P11 | `src/capturas/3.1/P11.png` | Pendiente |
+| P12 | `src/capturas/3.1/P12.jpg` | Insertada |
+
+Captura de P1. El mensaje no cabe en una sola pantalla, por eso lo partimos en dos:
+
+![P1, primera parte: repo, roles y objetivos de la Parte II](src/capturas/3.1/P1.1.jpg)
+
+![P1, segunda parte: restricciones, aclaraciones y flujo de ejecución](src/capturas/3.1/P1.2.jpg)
+
+![P12, ronda 3: Parte I, construcción de la Parte III y wiki](src/capturas/3.1/P12.jpg)
 
 ### Metodología de ingeniería de prompts y verificación crítica
 
@@ -381,7 +390,7 @@ Hallazgos de verificación de esta fase:
 
 | ID | Hallazgo | Origen | Verificación | Acción |
 | --- | --- | --- | --- | --- |
-| H-01 | La rúbrica nombra el hook como `file_mmap`; en `lsm_hook_defs.h` (rama master) el hook es `mmap_file` (`file`, `reqprot`, `prot`, `flags`) y `file_mprotect` (`vma`, `reqprot`, `prot`). No existe un hook `file_mmap`. | Nombre de la rúbrica, no una salida del modelo | Dos agentes lo contrastaron con `lsm_hook_defs.h` de master; falta contrastarlo con los headers del kernel de WSL2 (DESCUBRIR). | Usar `mmap_file` y `file_mprotect` en el diseño. |
+| H-01 | La rúbrica nombra el hook como `file_mmap`; en `lsm_hook_defs.h` (rama master) el hook es `mmap_file` (`file`, `reqprot`, `prot`, `flags`) y `file_mprotect` (`vma`, `reqprot`, `prot`). No existe un hook `file_mmap`. | Nombre de la rúbrica, no una salida del modelo | Dos agentes lo contrastaron con `lsm_hook_defs.h` de master; después lo confirmamos con el BTF del kernel de WSL2 volcado con `bpftool`: `bpf_lsm_mmap_file(file, reqprot, prot, flags)` y `bpf_lsm_file_mprotect(vma, reqprot, prot)`. | Usar `mmap_file` y `file_mprotect` en el diseño. |
 
 #### Validación y compilación
 
@@ -398,7 +407,7 @@ Esta sección ya no es solo estructura: son los pasos que seguimos el sábado 20
 | clang | 18.1.3 | `clang --version` |
 | bpftool | v7.4.0, con libbpf v1.4 | `$(ls /usr/lib/linux-tools/*/bpftool \| head -1) version` |
 | strace | POR CONFIRMAR (se instaló con `apt`) | `strace -V` |
-| perf | POR CONFIRMAR (viene en `linux-tools-generic`) | `perf --version` |
+| perf | 6.18.54.1.g26d1ceb55087, en `/usr/bin/perf` (así lo reporta `make bench`) | `perf --version` |
 
 ##### Paso a paso
 
@@ -504,7 +513,7 @@ Todo se hace desde WSL2, en la carpeta `mmapguard/`. Nada de lo que sigue exige 
 | `demo.sh defended` | `shared-write`, `exec` y `mprotect-write` denegados; `private-write` permitido | Tres DENEGADO `errno=1` (código 10) y uno PERMITIDO (código 0) |
 | `make bench` | Tabla de ns por iteración y fallos menores | 1570.0, 16909.2 y 1828.0 ns de mediana; fallos menores 2, 15002 y 2 |
 
-Para la medición con defensa solo hicimos 2 sesiones (la guía pedía 3), así que sus diferencias se leen con cuidado; el detalle está en la Parte III.
+La medición con defensa la hicimos en 3 sesiones, como pedía la guía; en ninguna comparación la diferencia se distingue del ruido y el detalle está en la Parte III.
 
 ##### Errores comunes y cómo resolverlos
 
@@ -519,7 +528,7 @@ Para la medición con defensa solo hicimos 2 sesiones (la guía pedía 3), así 
 
 ### Estrategia arquitectónica seleccionada
 
-Selección propuesta: **opción C**, un programa eBPF-LSM en los hooks `mmap_file` y `file_mprotect` que decide allow o deny al crear o cambiar la protección de un VMA, con auditoría por ring buffer. Una sonda sobre `handle_mm_fault` solo mide overhead y no decide. El cargador, la CLI y los scripts viven en espacio de usuario y no son la capa de defensa. Condición de viabilidad, por descubrir en el kernel de WSL2: `CONFIG_BPF_LSM`, BTF y `bpf` en `lsm=`; si no se cumple, se elige entre un kernel propio de WSL2 y la alternativa B.
+Selección propuesta: **opción C**, un programa eBPF-LSM en los hooks `mmap_file` y `file_mprotect` que decide allow o deny al crear o cambiar la protección de un VMA, con auditoría por ring buffer. Una sonda sobre `handle_mm_fault` solo mide overhead y no decide. El cargador, la CLI y los scripts viven en espacio de usuario y no son la capa de defensa. Condición de viabilidad, por descubrir en el kernel de WSL2: `CONFIG_BPF_LSM`, BTF y `bpf` en `lsm=`; si no se cumple, se elige entre un kernel propio de WSL2 y la alternativa B. Resultado: se cumplió en el kernel 6.18.54.1 (ver la Parte III).
 
 Alternativas evaluadas:
 
@@ -627,7 +636,7 @@ Escala cualitativa Alto/Medio/Bajo; no contiene mediciones. El overhead real de 
 | Rendimiento | D (código nativo) y E en costo bruto; C cercano a D | B si se decide en `handle_mm_fault` | E es barata solo porque no protege. C evita la ruta de fallos para decidir. Todo por medir. |
 | Seguridad | D por resistencia; C por profundidad y auditoría | E, luego A | Ninguna alternativa inspecciona por acceso una vez activa la PTE. |
 
-Justificación de la selección: C es la única alternativa que decide en el kernel (`mmap_file` y `file_mprotect`) sin cargar un LKM ni recompilar, y el verificador eBPF reduce el riesgo de panic. Su condición de viabilidad es que el kernel de WSL2 tenga `CONFIG_BPF_LSM`, BTF y `bpf` en `lsm=` (DESCUBRIR). C no cubre accesos de carga y escritura tras activarse la PTE, mapeos creados antes de cargar el programa, ni un root con capacidades BPF que descargue el programa; estas son limitaciones declaradas.
+Justificación de la selección: C es la única alternativa que decide en el kernel (`mmap_file` y `file_mprotect`) sin cargar un LKM ni recompilar, y el verificador eBPF reduce el riesgo de panic. Su condición de viabilidad es que el kernel de WSL2 tenga `CONFIG_BPF_LSM`, BTF y `bpf` en `lsm=` (confirmado después: `bpf` figura en la lista activa de LSM, ver la Parte III). C no cubre accesos de carga y escritura tras activarse la PTE, mapeos creados antes de cargar el programa, ni un root con capacidades BPF que descargue el programa; estas son limitaciones declaradas.
 
 Referencias consultadas:
 
@@ -687,6 +696,10 @@ Desde WSL2, en la carpeta `mmapguard/`. Lo primero que aprendimos es el orden: *
 
 Para ver los programas cargados con bpftool hay que usar el binario real y no el wrapper del PATH, y con `sudo`: `sudo $(ls /usr/lib/linux-tools/*/bpftool | head -1) prog show`. Si `bpf` no estuviera en la lista activa de LSM, el enganche fallaría y habría que arrancar el kernel con `lsm=` incluyendo `bpf`; en nuestro WSL2 no fue necesario porque ya estaba (se comprueba con `cat /sys/kernel/security/lsm`).
 
+Con la defensa cargada, `prog show` nos mostró dos programas de tipo `lsm`: `mg_mmap_file` (id 21, 800 B traducidos y 467 B en JIT) y `mg_file_mprotect` (id 22, 920 B traducidos y 527 B en JIT). Los dos tienen licencia `gpl`, los cargó el uid 0, comparten los mapas 1 y 2 (`map_ids 1,2`) y el `btf_id` 23. En esta salida no aparece la sonda `fentry`; si ese `load` fue sin `--count-faults` está POR CONFIRMAR. Al final la descarga borró los pines de `/sys/fs/bpf/mmapguard`.
+
+![bpftool prog show con mg_mmap_file y mg_file_mprotect cargados](src/capturas/p3/15_bpf_prog_show.jpg)
+
 ### Argumentación y análisis de resultados
 
 #### Por qué decidir en el kernel y no en espacio de usuario
@@ -695,7 +708,7 @@ Nos quedamos con el kernel porque el hook LSM (`mmap_file`, `file_mprotect`) res
 
 Tampoco la vendemos de más. El hook decide cuando se crea o cambia el mapeo, no en cada acceso: con la PTE activa, las lecturas y escrituras corren sin pasar por el hook.
 
-Lo que medimos son dos cosas. Primero, la línea base, es decir, el costo de la operación que el hook intercepta (`make bench`, más abajo). Segundo, con la defensa cargada, que el hook sí decide: la demo con defensa niega `shared-write`, `exec` y `mprotect-write` con errno=1 y deja pasar `private-write`, y las pruebas con root dieron 64 PASS. El overhead de la defensa lo medimos en 2 sesiones de `bench_con_defensa.sh` (la guía pedía 3) y no lo afirmamos como cifra: en todas las comparaciones los rangos de mínimo a máximo se solapan con los de la línea base de la misma sesión, así que no lo distinguimos del ruido de WSL2. Entre ejecuciones de WSL2 las medianas cambiaron, por eso las leemos como orden de magnitud.
+Lo que medimos son dos cosas. Primero, la línea base, es decir, el costo de la operación que el hook intercepta (`make bench`, más abajo). Segundo, con la defensa cargada, que el hook sí decide: la demo con defensa niega `shared-write`, `exec` y `mprotect-write` con errno=1 y deja pasar `private-write`, y las pruebas con root dieron 64 PASS. El overhead de la defensa lo medimos en 3 sesiones de `bench_con_defensa.sh`, como pedía la guía, y no lo afirmamos como cifra: en todas las comparaciones los rangos de mínimo a máximo se solapan con los de la línea base de la misma sesión, así que no lo distinguimos del ruido de WSL2. Entre ejecuciones de WSL2 las medianas cambiaron, por eso las leemos como orden de magnitud.
 
 #### Resultados con defensa
 
@@ -742,26 +755,28 @@ La demo imprime al final unas líneas "ESPERADO" que son la referencia del dise�
 
 Medimos en dos capas. La **línea base** es `make bench` sin defensa. El **costo de la defensa** sale de `sudo bash bench/bench_con_defensa.sh`, que en cada sesión mide tres casos sobre un archivo de 64 KiB: el caso 0 es sin defensa (la referencia de esa misma sesión, antes de cargar), el caso i es con la defensa cargada y el archivo sin regla (el hook hace una búsqueda que falla) y el caso ii es con la defensa cargada y el archivo con la regla `deny-exec` (búsqueda exitosa). En todos los casos usamos 1000 iteraciones por corrida y 10 corridas intercaladas entre escenarios, y reportamos la mediana en ns por iteración con el rango (mínimo a máximo) entre paréntesis.
 
-**Línea base (`make bench`, sin defensa).** La ejecución inicial es la que teníamos antes de cargar la defensa; A y B son dos ejecuciones posteriores del mismo comando.
+**Línea base (`make bench`, sin defensa).** La ejecución inicial es la que teníamos antes de cargar la defensa; A y B son dos ejecuciones posteriores del mismo comando, y la última columna es la ejecución en la que `perf stat` volvió a funcionar.
 
-| Medición | Ejecución inicial | `make bench` A | `make bench` B |
-| --- | --- | --- | --- |
-| `mmap_munmap`, ns por iteración | 1506.7 (1118.2 a 2693.0) | 1570.0 (1157.8 a 4244.1) | 2279.9 (1314.8 a 3556.4) |
-| `mmap_touch`, ns por iteración | 18393.2 (16242.4 a 38799.0) | 16909.2 (15996.1 a 18373.2) | 16461.6 (15765.0 a 20099.9) |
-| `mmap_mprotect`, ns por iteración | 1622.5 (1456.9 a 2912.0) | 1828.0 (1506.3 a 2370.8) | 1673.4 (1193.5 a 5293.8) |
-| `mmap_munmap`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 |
-| `mmap_touch`, fallos de página menores por corrida | 15002 (15002 a 15002) | mediana 15002 | mediana 15002 |
-| `mmap_mprotect`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 |
+| Medición | Ejecución inicial | `make bench` A | `make bench` B | `make bench` con perf |
+| --- | --- | --- | --- | --- |
+| `mmap_munmap`, ns por iteración | 1506.7 (1118.2 a 2693.0) | 1570.0 (1157.8 a 4244.1) | 2279.9 (1314.8 a 3556.4) | 1351.8 (1126.4 a 2508.6) |
+| `mmap_touch`, ns por iteración | 18393.2 (16242.4 a 38799.0) | 16909.2 (15996.1 a 18373.2) | 16461.6 (15765.0 a 20099.9) | 15531.8 (15376.6 a 17779.4) |
+| `mmap_mprotect`, ns por iteración | 1622.5 (1456.9 a 2912.0) | 1828.0 (1506.3 a 2370.8) | 1673.4 (1193.5 a 5293.8) | 1542.3 (1404.9 a 3037.6) |
+| `mmap_munmap`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 | 2 (2 a 2) |
+| `mmap_touch`, fallos de página menores por corrida | 15002 (15002 a 15002) | mediana 15002 | mediana 15002 | 15002 (15002 a 16002) |
+| `mmap_mprotect`, fallos de página menores por corrida | 2 (2 a 2) | mediana 2 | mediana 2 | 2 (2 a 2) |
 
 ![make bench con las líneas crudas](src/capturas/p3/06_bench_linea_base.jpg)
 
-**Con defensa (`bench_con_defensa.sh`, dos sesiones).**
+![make bench con perf stat funcionando de nuevo: 60, 15299 y 59 page-faults](src/capturas/p3/16_make_bench_con_perf.jpg)
 
-| Medición | Sesión A, caso 0 | Sesión A, caso i | Sesión A, caso ii | Sesión B, caso 0 | Sesión B, caso i | Sesión B, caso ii |
-| --- | --- | --- | --- | --- | --- | --- |
-| `mmap_munmap`, ns por iteración | 1419.5 (1168.3 a 3107.9) | 1416.0 (1314.7 a 2386.1) | 1415.6 (1257.1 a 2447.3) | 2026.8 (1178.0 a 3860.8) | 1560.0 (1289.1 a 2738.5) | 1876.8 (1312.0 a 6143.3) |
-| `mmap_touch`, ns por iteración | 16206.7 (15705.0 a 19771.0) | 16656.2 (16174.5 a 18516.3) | 16380.3 (16014.9 a 22294.4) | 17537.9 (16425.9 a 52970.6) | 18229.4 (16304.2 a 20958.0) | 18126.2 (17209.6 a 58434.5) |
-| `mmap_mprotect`, ns por iteración | 1582.1 (1496.6 a 2363.8) | 1877.3 (1756.0 a 1918.7) | 1826.8 (1735.8 a 1977.2) | 1888.0 (1514.5 a 3226.0) | 1966.7 (1822.5 a 3002.6) | 2133.2 (1760.5 a 3312.2) |
+**Con defensa (`bench_con_defensa.sh`, tres sesiones).**
+
+| Medición | Sesión A, caso 0 | Sesión A, caso i | Sesión A, caso ii | Sesión B, caso 0 | Sesión B, caso i | Sesión B, caso ii | Sesión C, caso 0 | Sesión C, caso i | Sesión C, caso ii |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `mmap_munmap`, ns por iteración | 1419.5 (1168.3 a 3107.9) | 1416.0 (1314.7 a 2386.1) | 1415.6 (1257.1 a 2447.3) | 2026.8 (1178.0 a 3860.8) | 1560.0 (1289.1 a 2738.5) | 1876.8 (1312.0 a 6143.3) | 1404.0 (1140.0 a 2438.0) | 1364.7 (1300.8 a 2737.0) | 1334.4 (1269.7 a 1931.3) |
+| `mmap_touch`, ns por iteración | 16206.7 (15705.0 a 19771.0) | 16656.2 (16174.5 a 18516.3) | 16380.3 (16014.9 a 22294.4) | 17537.9 (16425.9 a 52970.6) | 18229.4 (16304.2 a 20958.0) | 18126.2 (17209.6 a 58434.5) | 16541.8 (15994.2 a 17612.2) | 16633.2 (16046.6 a 19139.9) | 16838.7 (15827.7 a 17795.9) |
+| `mmap_mprotect`, ns por iteración | 1582.1 (1496.6 a 2363.8) | 1877.3 (1756.0 a 1918.7) | 1826.8 (1735.8 a 1977.2) | 1888.0 (1514.5 a 3226.0) | 1966.7 (1822.5 a 3002.6) | 2133.2 (1760.5 a 3312.2) | 1605.4 (1526.5 a 2237.8) | 1808.2 (1720.0 a 1901.0) | 1805.8 (1758.9 a 2384.8) |
 
 Sesión A, casos 0, i y ii:
 
@@ -779,6 +794,14 @@ Sesión B, casos 0, i y ii:
 
 ![Sesión B, caso ii: defensa cargada y regla deny-exec](src/capturas/p3/12_bench_defensa_sesion_b_casoii.jpg)
 
+Sesión C, casos 0, i y ii. Los fallos menores por corrida dieron lo mismo que en la línea base: 2, 15002 y 2, con mínimo y máximo iguales a la mediana en los tres casos.
+
+![Sesión C, caso 0: sin defensa](src/capturas/p3/17_sesion_c_caso0.jpg)
+
+![Sesión C, caso i: defensa cargada y archivo sin regla](src/capturas/p3/18_sesion_c_casoi.jpg)
+
+![Sesión C, caso ii: defensa cargada y regla deny-exec](src/capturas/p3/19_sesion_c_casoii.jpg)
+
 **Diferencias contra el caso 0 de la misma sesión.** La diferencia es la mediana con defensa menos la mediana del caso 0 de la misma sesión (en ns), y el porcentaje es la diferencia dividida entre el caso 0 por 100. Los calculamos con un script de Python temporal (no versionado) que aplica esa fórmula a las medianas de la tabla anterior, con un decimal. Cualquier celda se puede comprobar a mano; por ejemplo, la sesión A de `mmap_mprotect` en el caso i sale con `python3 -c "print(round(1877.3-1582.1,1), round((1877.3-1582.1)/1582.1*100,1))"`, que imprime `295.2 18.7`.
 
 | Medición | Sesión | Caso | Caso 0, mediana (mín. a máx.) | Caso con defensa, mediana (mín. a máx.) | Diferencia (ns) | Porcentaje (%) | Rangos se solapan |
@@ -787,27 +810,33 @@ Sesión B, casos 0, i y ii:
 | `mmap_munmap` | A | ii | 1419.5 (1168.3 a 3107.9) | 1415.6 (1257.1 a 2447.3) | -3.9 | -0.3 | sí |
 | `mmap_munmap` | B | i | 2026.8 (1178.0 a 3860.8) | 1560.0 (1289.1 a 2738.5) | -466.8 | -23.0 | sí |
 | `mmap_munmap` | B | ii | 2026.8 (1178.0 a 3860.8) | 1876.8 (1312.0 a 6143.3) | -150.0 | -7.4 | sí |
+| `mmap_munmap` | C | i | 1404.0 (1140.0 a 2438.0) | 1364.7 (1300.8 a 2737.0) | -39.3 | -2.8 | sí |
+| `mmap_munmap` | C | ii | 1404.0 (1140.0 a 2438.0) | 1334.4 (1269.7 a 1931.3) | -69.6 | -5.0 | sí |
 | `mmap_touch` | A | i | 16206.7 (15705.0 a 19771.0) | 16656.2 (16174.5 a 18516.3) | +449.5 | +2.8 | sí |
 | `mmap_touch` | A | ii | 16206.7 (15705.0 a 19771.0) | 16380.3 (16014.9 a 22294.4) | +173.6 | +1.1 | sí |
 | `mmap_touch` | B | i | 17537.9 (16425.9 a 52970.6) | 18229.4 (16304.2 a 20958.0) | +691.5 | +3.9 | sí |
 | `mmap_touch` | B | ii | 17537.9 (16425.9 a 52970.6) | 18126.2 (17209.6 a 58434.5) | +588.3 | +3.4 | sí |
+| `mmap_touch` | C | i | 16541.8 (15994.2 a 17612.2) | 16633.2 (16046.6 a 19139.9) | +91.4 | +0.6 | sí |
+| `mmap_touch` | C | ii | 16541.8 (15994.2 a 17612.2) | 16838.7 (15827.7 a 17795.9) | +296.9 | +1.8 | sí |
 | `mmap_mprotect` | A | i | 1582.1 (1496.6 a 2363.8) | 1877.3 (1756.0 a 1918.7) | +295.2 | +18.7 | sí |
 | `mmap_mprotect` | A | ii | 1582.1 (1496.6 a 2363.8) | 1826.8 (1735.8 a 1977.2) | +244.7 | +15.5 | sí |
 | `mmap_mprotect` | B | i | 1888.0 (1514.5 a 3226.0) | 1966.7 (1822.5 a 3002.6) | +78.7 | +4.2 | sí |
 | `mmap_mprotect` | B | ii | 1888.0 (1514.5 a 3226.0) | 2133.2 (1760.5 a 3312.2) | +245.2 | +13.0 | sí |
+| `mmap_mprotect` | C | i | 1605.4 (1526.5 a 2237.8) | 1808.2 (1720.0 a 1901.0) | +202.8 | +12.6 | sí |
+| `mmap_mprotect` | C | ii | 1605.4 (1526.5 a 2237.8) | 1805.8 (1758.9 a 2384.8) | +200.4 | +12.5 | sí |
 
-**Criterio y veredicto.** Seguimos el criterio de la guía: una diferencia solo es defendible si el signo se repite en las sesiones y los rangos de mínimo a máximo no se solapan. El signo se repite en las dos sesiones en los seis pares de medición y caso, pero los rangos se solapan en las 12 comparaciones, así que ninguna diferencia es defendible y las seis salen "no se distingue del ruido":
+**Criterio y veredicto.** Seguimos el criterio de la guía: una diferencia solo es defendible si el signo se repite en las sesiones y los rangos de mínimo a máximo no se solapan. Con la sesión C ya tenemos las 3 sesiones. El signo se repite en las tres sesiones en los seis pares de medición y caso, pero los rangos se solapan en las 18 comparaciones, así que ninguna diferencia es defendible y las seis salen "no se distingue del ruido":
 
-| Medición | Caso | Signo sesión A | Signo sesión B | Signo se repite | Algún par se solapa | Veredicto |
-| --- | --- | --- | --- | --- | --- | --- |
-| `mmap_munmap` | i | - | - | sí | sí | no se distingue del ruido |
-| `mmap_munmap` | ii | - | - | sí | sí | no se distingue del ruido |
-| `mmap_touch` | i | + | + | sí | sí | no se distingue del ruido |
-| `mmap_touch` | ii | + | + | sí | sí | no se distingue del ruido |
-| `mmap_mprotect` | i | + | + | sí | sí | no se distingue del ruido |
-| `mmap_mprotect` | ii | + | + | sí | sí | no se distingue del ruido |
+| Medición | Caso | Signo sesión A | Signo sesión B | Signo sesión C | Signo se repite | Algún par se solapa | Veredicto |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `mmap_munmap` | i | - | - | - | sí | sí | no se distingue del ruido |
+| `mmap_munmap` | ii | - | - | - | sí | sí | no se distingue del ruido |
+| `mmap_touch` | i | + | + | + | sí | sí | no se distingue del ruido |
+| `mmap_touch` | ii | + | + | + | sí | sí | no se distingue del ruido |
+| `mmap_mprotect` | i | + | + | + | sí | sí | no se distingue del ruido |
+| `mmap_mprotect` | ii | + | + | + | sí | sí | no se distingue del ruido |
 
-Qué leemos de ahí, con cuidado. En `mmap_munmap` las diferencias salen negativas (de -0.2 % a -23.0 %), y no esperamos que una defensa haga el `mmap` más rápido: es la señal de que ese ruido es del tamaño de lo que buscábamos. En `mmap_touch` las diferencias son positivas pero pequeñas (de +1.1 % a +3.9 %). En `mmap_mprotect` las cuatro diferencias son positivas (de +4.2 % a +18.7 %, es decir, de +78.7 a +295.2 ns), lo que sería lo esperable si el hook de `file_mprotect` se paga en cada llamada, pero con rangos que se solapan no lo afirmamos como cifra. Y son solo **2 sesiones**: la guía pedía 3, y una tercera sesión de `bench_con_defensa.sh` queda pendiente.
+Qué leemos de ahí, con cuidado. En `mmap_munmap` las diferencias salen negativas (de -0.2 % a -23.0 %), y no esperamos que una defensa haga el `mmap` más rápido: es la señal de que ese ruido es del tamaño de lo que buscábamos. En `mmap_touch` las diferencias son positivas pero pequeñas (de +0.6 % a +3.9 %). En `mmap_mprotect` las seis diferencias son positivas (de +4.2 % a +18.7 %, es decir, de +78.7 a +295.2 ns; en la sesión C, +12.6 % y +12.5 %), lo que sería lo esperable si el hook de `file_mprotect` se paga en cada llamada, pero con rangos que se solapan no lo afirmamos como cifra. La sesión C repitió el signo de las sesiones A y B en los seis pares y no cambió el veredicto.
 
 **Conteo y traza (strace y ftrace).** Con `sudo` pudimos usar dos herramientas que antes no teníamos. Aquí no sirven para comparar tiempos: el tracer infla lo que mide.
 
@@ -820,7 +849,7 @@ Qué leemos de ahí, con cuidado. En `mmap_munmap` las diferencias salen negativ
 
 ![function_graph de security_mmap_file](src/capturas/p3/14_ftrace_security_mmap_file.jpg)
 
-**Qué cambió con `perf`.** En la ejecución inicial `perf stat -e page-faults,minor-faults` funcionaba sin root y dio 58, 15299 y 59 page-faults; lo usábamos como segunda lectura de los fallos de página. Después de instalar `linux-tools-generic`, el `perf` del PATH pasó a ser el wrapper de Ubuntu y `make bench` empezó a avisar "perf stat: no funciona sin root; se omite". Por eso la columna de fallos de página de las ejecuciones A y B solo usa `getrusage` (`ru_minflt`), que no depende de `perf`. `bench.sh` y `bench_con_defensa.sh` ya buscan el `perf` real en `/usr/lib/linux-tools/*/perf` y `*/bin/perf`; repetir `make bench` para recuperar esa lectura queda pendiente.
+**Qué cambió con `perf`.** En la ejecución inicial `perf stat -e page-faults,minor-faults` funcionaba sin root y dio 58, 15299 y 59 page-faults; lo usábamos como segunda lectura de los fallos de página. Después de instalar `linux-tools-generic`, el `perf` del PATH pasó a ser el wrapper de Ubuntu y `make bench` empezó a avisar "perf stat: no funciona sin root; se omite". Por eso la columna de fallos de página de las ejecuciones A y B solo usa `getrusage` (`ru_minflt`), que no depende de `perf`. `bench.sh` y `bench_con_defensa.sh` ahora buscan el `perf` real, y al repetir `make bench` recuperamos la lectura: el bench usó `/usr/bin/perf` (perf version 6.18.54.1.g26d1ceb55087), indicó que `perf stat` funciona sin root y dio 60, 15299 y 59 page-faults para `mmap_munmap`, `mmap_touch` y `mmap_mprotect`, con los mismos valores en minor-faults. Frente a la ejecución inicial solo cambió `mmap_munmap` (de 58 a 60). En `bench_con_defensa.sh`, que corre con root, el script detecta que `/usr/bin/perf` funciona pero no lo usa en esa medición.
 
 #### Limitaciones y trabajo futuro
 
@@ -831,7 +860,7 @@ Qué leemos de ahí, con cuidado. En `mmap_munmap` las diferencias salen negativ
 | Exige `bpf` en la lista de LSM y privilegios | Sin `bpf` activo en `lsm=` el enganche falla, y cargar o descargar pide root o CAP_BPF. Un root con CAP_BPF puede descargar el programa. | En nuestro WSL2 `bpf` ya estaba en la lista (`capability,landlock,yama,safesetid,selinux,bpf,ima`) y `load`, `policy list` y `unload` funcionaron con `sudo`. No probamos un kernel sin `bpf` en `lsm=`. | Estudiar cómo impedir la descarga por un root y repetir la prueba en un kernel donde `bpf` no esté activo. |
 | Identifica el archivo por (dev, inode), no por ruta | Un archivo recreado con otro inode escapa de la regla. En el 9p de `/mnt/c` de WSL, la estabilidad del inode está POR CONFIRMAR. Los enlaces duros comparten inode y quedan protegidos por esa misma razón (consecuencia del diseño, no probada). | `bpf/mmapguard.bpf.c` lee `i_sb->s_dev` e `i_ino` con CO-RE, y `src/policy.c` arma la llave desde `stat`. En la demo el inode del archivo de prueba cambió entre corridas porque se recrea cada vez. | Medir la estabilidad del inode en 9p y renovar la regla cuando el archivo se recree. |
 | Helpers permitidos sin enumerar | El verificador aceptó los programas y la sonda `fentry`, pero no enumeramos qué helpers admite en total el tipo `BPF_PROG_TYPE_LSM` (POR CONFIRMAR). Las firmas de los hooks sí se verificaron. | `load --count-faults` terminó sin rechazo del verificador. Las firmas salen de `bpftool btf dump file /sys/kernel/btf/vmlinux` en el kernel 6.18.54.1 (tabla de `mmapguard/CONTRATO.md`). | Listar los helpers disponibles para programas LSM y registrar la salida detallada del verificador. |
-| Costo de la defensa dentro del ruido | Medimos 2 sesiones de `bench_con_defensa.sh` (la guía pedía 3) y en todos los pares los rangos de mínimo a máximo se solapan con el caso 0 de la misma sesión: no distinguimos el costo del ruido de WSL2. | Tablas de "Costos medidos": por ejemplo `mmap_mprotect` fue de +4.2 % a +18.7 % sobre el caso 0, pero con rangos solapados; `mmap_munmap` salió negativo en las cuatro comparaciones. | Correr una tercera sesión de `sudo bash bench/bench_con_defensa.sh` y, si se puede, medir fuera de WSL2 para reducir el ruido. |
+| Costo de la defensa dentro del ruido | Medimos 3 sesiones de `bench_con_defensa.sh` y en las 18 comparaciones los rangos de mínimo a máximo se solapan con el caso 0 de la misma sesión: no distinguimos el costo del ruido de WSL2. | Tablas de "Costos medidos": por ejemplo `mmap_mprotect` fue de +4.2 % a +18.7 % sobre el caso 0, pero con rangos solapados; `mmap_munmap` salió negativo en las seis comparaciones. | Medir fuera de WSL2 para reducir el ruido y ver si la diferencia de `mmap_mprotect` se separa de él. |
 
 Dejamos las seis a la vista porque la rúbrica pide limitaciones, y ninguna es un error del código: todas son consecuencia de la opción C que escogimos.
 
@@ -1203,7 +1232,7 @@ La ida y vuelta (`C` + `X` concurrente y `c` + `x` secuencial) produjo el mismo 
 
 ## Información del curso
 **Curso:** Sistemas Operativos - SO2026B <br>
-**Profesor:** Edison Valencia Diaz <br>
+**Profesor:** Edison Valencia Díaz <br>
 **Universidad:** Universidad EAFIT <br>
 **Entrega:** Parcial 3, Seguridad de Archivos mediante Intervención en la Capa del Kernel y Mapeo de Memoria (mmap) <br>
 **Ciclo:** 2026-2
