@@ -7,6 +7,7 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
 ## Índice
 1. [Entregables según la rúbrica](#entregables-según-la-rúbrica)
    1. [Estrategia en PDF](#estrategia-en-pdf)
+   2. [Evidencia de entrega](#evidencia-de-entrega)
 2. [Parte I: Análisis conceptual y preguntas diagnósticas (30%)](#parte-i-análisis-conceptual-y-preguntas-diagnósticas-30)
    1. [Mapeo virtual y Page Faults](#1-mapeo-virtual-y-page-faults)
    2. [MAP_SHARED vs. MAP_PRIVATE](#2-map_shared-vs-map_private)
@@ -78,11 +79,19 @@ Este repositorio parte de una copia de Fear-Compresor (Parcial 2) como **base he
 | Código fuente y Makefile | [`mmapguard/`](mmapguard/) | Escrito y compilado sin advertencias; cargamos la defensa con `sudo` y las pruebas con root dieron 64 PASS, 0 FAIL |
 | README explicativo | Este archivo | Parte I, Parte II y Parte III documentadas, con la medición con defensa en 3 sesiones |
 | Informe completo (respuestas, estrategia con IA y argumentación) | Este archivo y el PDF [Estrategia Parcial 3](src/docx/Estrategia%20Parcial%203.pdf) | Completo: Parte I, Parte II y Parte III |
-| Evidencia individual | Buzón de interactiva EAFIT; la sube cada integrante | Pendiente |
+| Evidencia individual | Carpeta Dropbox "Parcial 3" de interactiva EAFIT; un envío por integrante | Entregada el 6 de noviembre de 2026 (envíos 964108 de Sebastián y 964115 de Miguel); ver [Evidencia de entrega](#evidencia-de-entrega) |
 
 ### Estrategia en PDF
 
 Documento de la estrategia del equipo para el Parcial 3: [Estrategia Parcial 3 (PDF)](src/docx/Estrategia%20Parcial%203.pdf). El PDF es del 6 de noviembre de 2026, anterior a la ejecución con `sudo`; los resultados medidos están en la Parte III de este README. El plan del PDF nombra `~/mg_build` como carpeta de compilación; la ruta final del toolchain es `~/.mmapguard-tc` y los binarios quedan en `mmapguard/build/`.
+
+### Evidencia de entrega
+
+Entregamos el 6 de noviembre de 2026 en la carpeta Dropbox "Parcial 3" de interactiva EAFIT: Sebastián subió el README (envío 964108) y Miguel subió el PDF `Estrategia Parcial 3.pdf` (envío 964115, 23:58), los dos con el enlace al repositorio.
+
+![Envío de Miguel: PDF de la estrategia y enlaces al repositorio y al README](src/capturas/entrega/evidencia_entrega_miguel.jpg)
+
+![Envío de Sebastián: README y enlace al repositorio](src/capturas/entrega/evidencia_entrega_sebastian.jpg)
 
 ## Parte I: Análisis conceptual y preguntas diagnósticas (30%)
 
@@ -135,10 +144,10 @@ Parcial 3 de Sistemas Operativos SO2026B: seguridad de archivos mediante interve
 | Elemento (rúbrica) | Estado |
 | --- | --- |
 | Flujo de trabajo asistido por IA (3.1) | Completo |
-| Tabla de uso de IA: skills y prompts (3.2) | Construida; crece con cada prompt nuevo |
-| Registro de ejecuciones y alucinaciones (3.2) | Estructura lista; se completa al terminar la entrega |
-| Validación y compilación (3.2) | Estructura lista; se completa al terminar la implementación |
-| Estrategia arquitectónica: diagrama y matriz (3.3) | Completo, sujeto a la puerta de viabilidad de la implementación |
+| Tabla de uso de IA: skills y prompts (3.2) | Completa: S1, S2 y P1 a P23 |
+| Registro de ejecuciones y alucinaciones (3.2) | Completo: E-01 a E-07 |
+| Validación y compilación (3.2) | Completo, con comandos y resultados reales |
+| Estrategia arquitectónica: diagrama y matriz (3.3) | Completo; viabilidad confirmada (bpf activo, verificador aceptó, 64 PASS) |
 
 ### Flujo de trabajo asistido por IA
 
@@ -211,6 +220,8 @@ Las capturas de los prompts se guardan en la carpeta `src/capturas/3.1/`.
 | --- | --- | --- |
 | P1 | `src/capturas/3.1/P1.1.jpg`, `src/capturas/3.1/P1.2.jpg` | Insertada |
 | P12 | `src/capturas/3.1/P12.jpg` | Insertada |
+| P22 | `src/capturas/3.1/P22.jpg` | Insertada |
+| P23 | `src/capturas/3.1/P23.jpg` | Insertada |
 
 Captura de P1. El mensaje no cabe en una sola pantalla, por eso lo partimos en dos:
 
@@ -220,6 +231,10 @@ Captura de P1. El mensaje no cabe en una sola pantalla, por eso lo partimos en d
 
 ![P12, ronda 3: Parte I, construcción de la Parte III y wiki](src/capturas/3.1/P12.jpg)
 
+![P22, ronda 4: cierre de pendientes, corrección y wiki](src/capturas/3.1/P22.jpg)
+
+![P23, ronda 5: pendientes por tipo](src/capturas/3.1/P23.jpg)
+
 ### Metodología de ingeniería de prompts y verificación crítica
 
 #### Tabla de uso de IA (skills y prompts)
@@ -228,8 +243,8 @@ Estructura de cada prompt: **C** contexto, **R** rol, **Rs** restricción, **RE*
 
 | ID | Tipo | Herramienta | Nombre | Propósito | Estructura del prompt | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Skill | Claude AI | `token-efficient` | Respuestas directas: resultado primero, sin relleno, tablas sobre prosa, sin guiones largos ni comillas tipográficas. | N/A | En uso |
-| S2 | Skill | Claude Code | `anthropic-skills:token-efficient-code` | Ejecución autónoma de código con mínimo de tokens; no versiona (sin commit, push ni merge); verifica con comandos reales; hereda las reglas de `token-efficient`. En Claude AI la misma skill se llama `token-efficient-code`. | N/A | Se usa desde la implementación |
+| S1 | Skill | Claude AI | `token-efficient` | Respuestas directas: resultado primero, sin relleno, tablas sobre prosa, sin guiones largos ni comillas tipográficas. | No aplica: es una skill (reglas permanentes), no un prompt | En uso |
+| S2 | Skill | Claude Code | `anthropic-skills:token-efficient-code` | Ejecución autónoma de código con mínimo de tokens; no versiona (sin commit, push ni merge); verifica con comandos reales; hereda las reglas de `token-efficient`. En Claude AI la misma skill se llama `token-efficient-code`. | No aplica: es una skill (reglas permanentes), no un prompt | Se usa desde la implementación |
 | P1 | Prompt | Miguel a Claude AI | Parte II: orquestación de agentes y edición del README | Definir el trabajo de la Parte II: roles, tabla de uso de IA, registro de alucinaciones, validación, diagrama y matriz. | **C:** base del proyecto cruzada con la rúbrica (ver cruce abajo). <br>**R:** Claude AI como magíster en SO, orquestador de agentes y diseñador de `.md`; Claude Code como constructor. <br>**Rs:** edita solo el README; 3.1 y 3.3 en paralelo, 3.2 después y solo pasos de construcción; sin avanzar a la Parte III sin orden explícita. <br>**RE:** README con la Parte II. | Enviado; texto completo abajo |
 | P2 | Prompt | Claude AI a agente en paralelo | Rol 1: exploración arquitectónica | Definir el rol de la IA en la exploración de estructuras, headers y hooks. | **C:** contexto compartido (curso, rúbrica, opciones A a E, pistas técnicas por verificar, reglas de salida). <br>**R:** agente de exploración arquitectónica. <br>**Rs:** sin afirmar hechos no ocurridos; la IA no es fuente de verdad; verificar hooks y `CONFIG_*`. <br>**RE:** fragmento del Rol 1 en tabla de 5 filas, máximo 220 palabras, y lista VERIFICAR. | Ejecutado; integrado |
 | P3 | Prompt | Claude AI a agente en paralelo | Rol 2: generación y verificación de C | Definir el rol de la IA al generar y verificar código de bajo nivel. | **C:** contexto compartido. <br>**R:** agente de generación y verificación de código C. <br>**Rs:** incluir la compuerta anti-alucinación (`EXPORT_SYMBOL`, headers, `-Wall -Wextra -Werror`, log del verificador); sin commits por IA. <br>**RE:** fragmento del Rol 2, máximo 240 palabras, y lista VERIFICAR. | Ejecutado; integrado |
@@ -250,7 +265,9 @@ Estructura de cada prompt: **C** contexto, **R** rol, **Rs** restricción, **RE*
 | P18 | Prompt | Claude AI a nueve agentes en paralelo | Guía de cierre de pendientes | Redactar los pasos de cada fila de la tabla 2 de `ReporteConstruccion.md`: LSM activos, carga, demo, pruebas con root, medición, trazado, toolchain, capturas y cierre en EAFIT. | **C:** fila asignada de la tabla 2 y código de `mmapguard/` leído en el equipo. <br>**R:** un agente por fila. <br>**Rs:** no ejecutar nada con sudo; dónde se corre, comando, salida esperada y qué devolver; máximo 170 palabras; POR CONFIRMAR lo no verificado. <br>**RE:** pasos integrados en la guía interactiva de nueve pasos. | Ejecutado; guía publicada y ejecutada por Miguel (capturas en `src/capturas/p3/` y `src/capturas/3.2/`) |
 | P19 | Prompt | Claude AI a Claude Code | `correccionParte3.md` | Corregir código, README y reporte con los resultados reales de la ejecución con root. | **C:** resultados transcritos de las capturas (demo, 64 PASS, dos sesiones de medición, strace, ftrace) e incidentes E-01 a E-03. <br>**R:** orquestador de seis agentes en paralelo (A, B, C, C2, D, E) con rutas exclusivas. <br>**Rs:** sin git que escriba ni sudo; README en CRLF con un solo escritor; pruebas sintéticas sin root; reporte de máximo 100 palabras. <br>**RE:** detección de `perf` y `bpftool`, README con resultados reales, `ReporteConstruccion.md` y `actualizarReadme.sh` con tres commits. | Ejecutado; commits `c11fbc7` y `9114659` |
 | P20 | Prompt | Claude AI a Claude Code | `actualizarWiki.md` (hoy `corregirWiki.md`) | Pasar todo el contenido del README a la wiki con la estructura heredada del README. | **C:** README corregido, `formatoWiki.md` como idea de formato y wiki local en `Error-Capa-8.wiki`. <br>**R:** documentalista técnico y orquestador de agentes por grupo de páginas. <br>**Rs:** en cola tras `correccionParte3.md`; en español; sin roles, sprints ni backlog; solo escribe en la wiki; sin git que escriba. <br>**RE:** páginas de la wiki, imágenes, verificación de enlaces y `actualizarWiki.sh`. | Ejecutado; wiki construida en local |
-| P21 | Prompt | Claude AI a Claude Code | `corregirWiki.md` | Adaptar la wiki construida antes de versionarla: quitar autorreferencias al README, enlazarlo solo donde complementa, retirar las capturas P2 a P11 inexistentes y agregar la imagen del diagrama conceptual. | **C:** wiki local sin commit, cambios del README y `formatoWiki.md` como idea. <br>**R:** documentalista técnico y orquestador de cuatro agentes en paralelo. <br>**Rs:** solo escribe en la wiki y en `actualizarWiki.sh`; sin git que escriba; sin páginas nuevas. <br>**RE:** wiki autocontenida y `actualizarWiki.sh` con el mensaje actualizado. | Pendiente de ejecutar |
+| P21 | Prompt | Claude AI a Claude Code | `corregirWiki.md` | Adaptar la wiki construida antes de versionarla: quitar autorreferencias al README, enlazarlo solo donde complementa, retirar las capturas P2 a P11 inexistentes y agregar la imagen del diagrama conceptual. | **C:** wiki local sin commit, cambios del README y `formatoWiki.md` como idea. <br>**R:** documentalista técnico y orquestador de cuatro agentes en paralelo. <br>**Rs:** solo escribe en la wiki y en `actualizarWiki.sh`; sin git que escriba; sin páginas nuevas. <br>**RE:** wiki autocontenida y `actualizarWiki.sh` con el mensaje actualizado. | Ejecutado; commit `3f705d8` en la wiki |
+| P22 | Prompt | Miguel a Claude AI | Ronda 4: cierre de pendientes, corrección y wiki | Pedir los pasos para cerrar la tabla 2 de `ReporteConstruccion.md` (un agente por punto) y, con los resultados, los prompts `correccionParte3.md` y el de la wiki. | **C:** tabla 2 de `ReporteConstruccion.md` y resultados de Claude Code. <br>**R:** Claude AI como orquestador, un agente por punto. <br>**Rs:** reporte de Claude Code de máximo 100 palabras con Check y Falta; commits por grupo con `actualizarReadme.sh`; la wiki en cola. <br>**RE:** guía de cierre, `correccionParte3.md` y prompt de la wiki. | Ejecutado (P18, P19 y P20) |
+| P23 | Prompt | Miguel a Claude AI | Ronda 5: pendientes por tipo | Reorganizar los pendientes en Manual (WSL y Git Bash), Auto (Claude AI, un agente por proceso en paralelo) y Prompt (Claude Code). | **C:** resultado de `correccionParte3.md`. <br>**R:** Claude AI como orquestador. <br>**Rs:** lo que no depende de Miguel se ejecuta en paralelo. <br>**RE:** lista de pendientes con bloques de comandos y registro E-04 a E-07 y filas P12 a P20. | Ejecutado |
 
 Cruce entre la base del proyecto y la rúbrica (contexto de P1):
 
