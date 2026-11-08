@@ -210,16 +210,6 @@ Las capturas de los prompts se guardan en la carpeta `src/capturas/3.1/`.
 | Prompt | Archivo | Estado |
 | --- | --- | --- |
 | P1 | `src/capturas/3.1/P1.1.jpg`, `src/capturas/3.1/P1.2.jpg` | Insertada |
-| P2 | `src/capturas/3.1/P2.png` | Pendiente |
-| P3 | `src/capturas/3.1/P3.png` | Pendiente |
-| P4 | `src/capturas/3.1/P4.png` | Pendiente |
-| P5 | `src/capturas/3.1/P5.png` | Pendiente |
-| P6 | `src/capturas/3.1/P6.png` | Pendiente |
-| P7 | `src/capturas/3.1/P7.png` | Pendiente |
-| P8 | `src/capturas/3.1/P8.png` | Pendiente |
-| P9 | `src/capturas/3.1/P9.png` | Pendiente |
-| P10 | `src/capturas/3.1/P10.png` | Pendiente |
-| P11 | `src/capturas/3.1/P11.png` | Pendiente |
 | P12 | `src/capturas/3.1/P12.jpg` | Insertada |
 
 Captura de P1. El mensaje no cabe en una sola pantalla, por eso lo partimos en dos:
@@ -259,7 +249,8 @@ Estructura de cada prompt: **C** contexto, **R** rol, **Rs** restricción, **RE*
 | P17 | Prompt | Claude AI a agente en paralelo | Prioridad 4.2 | Ordenar los subpuntos 4.2.a a 4.2.c por dependencia, bloqueo real y recorte. | **C:** orden de ejecución de `promptConstruccion.md` y bloqueos D1 a D12. <br>**R:** agente de prioridad del bloque 4.2. <br>**Rs:** máximo 30 palabras por campo; límites de 250 y 100 palabras; sin inventar; JSON validado. <br>**RE:** filas de 4.2 para `prioridad.docx`. | Ejecutado; integrado en `prioridad.docx` (SOU) |
 | P18 | Prompt | Claude AI a nueve agentes en paralelo | Guía de cierre de pendientes | Redactar los pasos de cada fila de la tabla 2 de `ReporteConstruccion.md`: LSM activos, carga, demo, pruebas con root, medición, trazado, toolchain, capturas y cierre en EAFIT. | **C:** fila asignada de la tabla 2 y código de `mmapguard/` leído en el equipo. <br>**R:** un agente por fila. <br>**Rs:** no ejecutar nada con sudo; dónde se corre, comando, salida esperada y qué devolver; máximo 170 palabras; POR CONFIRMAR lo no verificado. <br>**RE:** pasos integrados en la guía interactiva de nueve pasos. | Ejecutado; guía publicada y ejecutada por Miguel (capturas en `src/capturas/p3/` y `src/capturas/3.2/`) |
 | P19 | Prompt | Claude AI a Claude Code | `correccionParte3.md` | Corregir código, README y reporte con los resultados reales de la ejecución con root. | **C:** resultados transcritos de las capturas (demo, 64 PASS, dos sesiones de medición, strace, ftrace) e incidentes E-01 a E-03. <br>**R:** orquestador de seis agentes en paralelo (A, B, C, C2, D, E) con rutas exclusivas. <br>**Rs:** sin git que escriba ni sudo; README en CRLF con un solo escritor; pruebas sintéticas sin root; reporte de máximo 100 palabras. <br>**RE:** detección de `perf` y `bpftool`, README con resultados reales, `ReporteConstruccion.md` y `actualizarReadme.sh` con tres commits. | Ejecutado; commits `c11fbc7` y `9114659` |
-| P20 | Prompt | Claude AI a Claude Code | `actualizarWiki.md` | Pasar todo el contenido del README a la wiki con la estructura heredada del README. | **C:** README corregido, `formatoWiki.md` como idea de formato y wiki local en `Error-Capa-8.wiki`. <br>**R:** documentalista técnico y orquestador de agentes por grupo de páginas. <br>**Rs:** en cola tras `correccionParte3.md`; en español; sin roles, sprints ni backlog; solo escribe en la wiki; sin git que escriba. <br>**RE:** páginas de la wiki, imágenes, verificación de enlaces y `actualizarWiki.sh`. | Pendiente de ejecutar |
+| P20 | Prompt | Claude AI a Claude Code | `actualizarWiki.md` (hoy `corregirWiki.md`) | Pasar todo el contenido del README a la wiki con la estructura heredada del README. | **C:** README corregido, `formatoWiki.md` como idea de formato y wiki local en `Error-Capa-8.wiki`. <br>**R:** documentalista técnico y orquestador de agentes por grupo de páginas. <br>**Rs:** en cola tras `correccionParte3.md`; en español; sin roles, sprints ni backlog; solo escribe en la wiki; sin git que escriba. <br>**RE:** páginas de la wiki, imágenes, verificación de enlaces y `actualizarWiki.sh`. | Ejecutado; wiki construida en local |
+| P21 | Prompt | Claude AI a Claude Code | `corregirWiki.md` | Adaptar la wiki construida antes de versionarla: quitar autorreferencias al README, enlazarlo solo donde complementa, retirar las capturas P2 a P11 inexistentes y agregar la imagen del diagrama conceptual. | **C:** wiki local sin commit, cambios del README y `formatoWiki.md` como idea. <br>**R:** documentalista técnico y orquestador de cuatro agentes en paralelo. <br>**Rs:** solo escribe en la wiki y en `actualizarWiki.sh`; sin git que escriba; sin páginas nuevas. <br>**RE:** wiki autocontenida y `actualizarWiki.sh` con el mensaje actualizado. | Pendiente de ejecutar |
 
 Cruce entre la base del proyecto y la rúbrica (contexto de P1):
 
@@ -541,6 +532,10 @@ Alternativas evaluadas:
 | E | Wrapper en espacio de usuario (`LD_PRELOAD`), solo como línea base descartada |
 
 #### Diagrama conceptual
+
+![Diagrama conceptual: la decisión ocurre en Ring 0 con eBPF-LSM en mmap_file y file_mprotect](src/diagramas/diagrama-conceptual.png)
+
+Fuente editable: [`src/diagramas/diagrama-conceptual.mmd`](src/diagramas/diagrama-conceptual.mmd). El mismo diagrama en Mermaid:
 
 ```mermaid
 flowchart TB

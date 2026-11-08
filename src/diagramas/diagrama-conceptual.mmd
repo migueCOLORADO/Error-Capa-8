@@ -1,0 +1,54 @@
+flowchart TB
+  subgraph R3["RING 3 - ESPACIO DE USUARIO"]
+    direction TB
+    APP["Proceso objetivo: llama mmap o mprotect sobre archivo"]
+    TOOLS["NO DEFENSIVA: cargador libbpf, CLI de politica, scripts de prueba y analisis"]
+    CONS["Consumidor del ring buffer: registro de auditoria"]
+  end
+
+  SYS{{"FRONTERA DE SYSCALL: transicion Ring 3 a Ring 0"}}
+
+  subgraph R0["RING 0 - KERNEL"]
+    direction TB
+    ENTRY["Entrada de syscall mmap o mprotect"]
+    VMAPATH["Ruta mm: validacion, do_mmap, preparacion del VMA"]
+    HOOK["Hook LSM: security_mmap_file o security_file_mprotect"]
+    BPF["Programa eBPF-LSM: evalua archivo, UID, comm, prot y flags"]
+    MAP[("Mapa BPF de politica: archivos protegidos y reglas")]
+    DEC{"Decision"}
+    DENY["DENY: retorna error negativo y no se crea ni cambia el VMA"]
+    ALLOW["ALLOW: se crea o cambia el VMA"]
+    RB[["Ring buffer BPF: eventos de auditoria allow y deny"]]
+    PF["Primer acceso: page fault, handle_mm_fault"]
+    PTE["PTE activa: pagina presente con permisos de hardware"]
+    PROBE["Sonda de medicion fentry o kprobe: solo cuenta y mide, no decide"]
+  end
+
+  NOTE["LIMITE DE COBERTURA: tras la PTE activa, cada lectura o escritura corre a velocidad de hardware sin conmutacion a Ring 0 ni hook"]
+
+  APP --> SYS
+  SYS --> ENTRY
+  ENTRY --> VMAPATH
+  VMAPATH --> HOOK
+  HOOK --> BPF
+  BPF <--> MAP
+  BPF --> DEC
+  DEC -->|"deny"| DENY
+  DEC -->|"allow"| ALLOW
+  DENY -->|"errno hacia el proceso"| APP
+  DENY --> RB
+  ALLOW --> RB
+  ALLOW --> PF
+  PF --> PTE
+  PTE -.-> NOTE
+  PF -.->|"mide"| PROBE
+  RB -->|"eventos"| CONS
+  TOOLS -->|"carga programa y escribe politica"| MAP
+  TOOLS -.->|"lee contadores"| PROBE
+
+  classDef user fill:#eef,stroke:#446
+  classDef kern fill:#efe,stroke:#464
+  classDef warn fill:#fee,stroke:#a44
+  class APP,TOOLS,CONS user
+  class ENTRY,VMAPATH,HOOK,BPF,MAP,DEC,DENY,ALLOW,RB,PF,PTE,PROBE kern
+  class NOTE warn
